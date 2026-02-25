@@ -1,0 +1,117 @@
+using System.Text;
+using Microsoft.EntityFrameworkCore;
+using PhotoSortingApp.Core.Infrastructure;
+using PhotoSortingApp.Core.Interfaces;
+using PhotoSortingApp.Domain.Models;
+
+namespace PhotoSortingApp.Data.Services;
+
+public class OrganizerPlanService : IOrganizerPlanService
+{
+    private readonly Func<PhotoCatalogDbContext> _contextFactory;
+    private readonly string _logPath;
+
+    public OrganizerPlanService(Func<PhotoCatalogDbContext> contextFactory, string? baseDirectory = null)
+    {
+        _contextFactory = contextFactory;
+        StoragePaths.EnsureDirectories(baseDirectory);
+        _logPath = StoragePaths.GetOrganizerLogPath(baseDirectory);
+    }
+
+    public async Task<OrganizerPlanResult> CreatePlanAsync(OrganizerPlanRequest request, CancellationToken cancellationToken = default)
+    {
+        using var db = _contextFactory();
+        var root = await db.ScanRoots.AsNoTracking()
+            .SingleAsync(x => x.Id == request.ScanRootId, cancellationToken)
+            .ConfigureAwait(false);
+        var photos = await db.PhotoAssets.AsNoTracking()
+            .Where(x => x.ScanRootId == request.ScanRootId)
+            .OrderBy(x => x.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var occupiedTargets = new HashSet<string>(photos.Select(x => x.FullPath), StringComparer.OrdinalIgnoreCase);
+        var planItems = new List<OrganizerPlanItem>();
+
+        foreach (var photo in photos)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(photo.FullPath) || string.IsNullOrWhiteSpace(photo.FileName))
+            {
+                continue;
+            }
+
+            var effectiveDateUtc = photo.DateTaken ?? photo.FileLastWriteUtc;
+            var effectiveLocal = effectiveDateUtc.ToLocalTime();
+            var yearFolder = effectiveLocal.Year.ToString("0000");
+            var monthFolder = $"{effectiveLocal.Year:0000}-{effectiveLocal.Month:00}";
+            var targetDirectory = Path.Combine(root.RootPath, yearFolder, monthFolder);
+            var initialTarget = Path.Combine(targetDirectory, photo.FileName);
+
+            if (PathsEqual(photo.FullPath, initialTarget))
+            {
+                continue;
+            }
+
+            occupiedTargets.Remove(photo.FullPath);
+            var resolvedTarget = ResolveUniqueTarget(initialTarget, occupiedTargets);
+            occupiedTargets.Add(resolvedTarget);
+
+            planItems.Add(new OrganizerPlanItem
+            {
+                PhotoId = photo.Id,
+                SourcePath = photo.FullPath,
+                DestinationPath = resolvedTarget,
+                Reason = "Sort to Year/Month folders"
+            });
+        }
+
+        var result = new OrganizerPlanResult
+        {
+            GeneratedUtc = DateTime.UtcNow,
+            TotalEvaluated = photos.Count,
+            TotalMoves = planItems.Count,
+            Items = planItems
+        };
+
+        await AppendPlanLogAsync(root.RootPath, result, cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+
+    private async Task AppendPlanLogAsync(string rootPath, OrganizerPlanResult result, CancellationToken cancellationToken)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine($"[{result.GeneratedUtc:O}] Root={rootPath} Evaluated={result.TotalEvaluated} Moves={result.TotalMoves}");
+        foreach (var item in result.Items)
+        {
+            builder.AppendLine($"PLAN: {item.SourcePath} => {item.DestinationPath}");
+        }
+
+        await File.AppendAllTextAsync(_logPath, builder.ToString(), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string ResolveUniqueTarget(string path, HashSet<string> occupied)
+    {
+        var directory = Path.GetDirectoryName(path) ?? string.Empty;
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path);
+        var extension = Path.GetExtension(path);
+
+        var candidate = path;
+        var suffix = 1;
+        while (occupied.Contains(candidate) || File.Exists(candidate))
+        {
+            candidate = Path.Combine(directory, $"{fileNameWithoutExtension}_{suffix}{extension}");
+            suffix++;
+        }
+
+        return candidate;
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        return string.Equals(
+            Path.GetFullPath(left),
+            Path.GetFullPath(right),
+            StringComparison.OrdinalIgnoreCase);
+    }
+}
