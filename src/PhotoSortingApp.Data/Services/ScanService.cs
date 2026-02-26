@@ -9,6 +9,27 @@ namespace PhotoSortingApp.Data.Services;
 public class ScanService : IScanService
 {
     private const int SaveBatchSize = 100;
+    private static readonly HashSet<string> ExcludedTopLevelDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "$Recycle.Bin",
+        "Config.Msi",
+        "MSOCache",
+        "PerfLogs",
+        "Program Files",
+        "Program Files (x86)",
+        "ProgramData",
+        "Recovery",
+        "System Volume Information",
+        "Windows"
+    };
+
+    private static readonly HashSet<string> ExcludedSegmentNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".git",
+        ".nuget",
+        "AppData",
+        "node_modules"
+    };
 
     private readonly Func<PhotoCatalogDbContext> _contextFactory;
     private readonly IMetadataService _metadataService;
@@ -69,7 +90,11 @@ public class ScanService : IScanService
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<ScanResult> ScanAsync(int scanRootId, IProgress<ScanProgressInfo>? progress = null, CancellationToken cancellationToken = default)
+    public async Task<ScanResult> ScanAsync(
+        int scanRootId,
+        IProgress<ScanProgressInfo>? progress = null,
+        CancellationToken cancellationToken = default,
+        ScanOptions? options = null)
     {
         using var db = _contextFactory();
         var root = await db.ScanRoots.SingleAsync(x => x.Id == scanRootId, cancellationToken).ConfigureAwait(false);
@@ -80,7 +105,7 @@ public class ScanService : IScanService
         }
 
         var stopwatch = Stopwatch.StartNew();
-        var filePaths = EnumerateSupportedFiles(root.RootPath).ToList();
+        var filePaths = EnumerateSupportedFiles(root.RootPath, options ?? new ScanOptions()).ToList();
         var filesFound = filePaths.Count;
 
         var existingList = await db.PhotoAssets
@@ -218,14 +243,20 @@ public class ScanService : IScanService
         }
     }
 
-    private static IEnumerable<string> EnumerateSupportedFiles(string rootPath)
+    private static IEnumerable<string> EnumerateSupportedFiles(string rootPath, ScanOptions options)
     {
+        rootPath = Path.GetFullPath(rootPath);
         var pending = new Stack<string>();
         pending.Push(rootPath);
 
         while (pending.Count > 0)
         {
             var current = pending.Pop();
+            if (ShouldSkipDirectory(current, rootPath, options))
+            {
+                continue;
+            }
+
             string[] directories;
 
             try
@@ -239,6 +270,11 @@ public class ScanService : IScanService
 
             foreach (var directory in directories)
             {
+                if (ShouldSkipDirectory(directory, rootPath, options))
+                {
+                    continue;
+                }
+
                 pending.Push(directory);
             }
 
@@ -265,7 +301,63 @@ public class ScanService : IScanService
     private static string NormalizePath(string path)
     {
         var fullPath = Path.GetFullPath(path);
+        var root = Path.GetPathRoot(fullPath);
+        if (!string.IsNullOrWhiteSpace(root) &&
+            string.Equals(fullPath, root, StringComparison.OrdinalIgnoreCase))
+        {
+            return root;
+        }
+
         return fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+    }
+
+    private static bool ShouldSkipDirectory(string directoryPath, string rootPath, ScanOptions options)
+    {
+        try
+        {
+            var attributes = File.GetAttributes(directoryPath);
+            if (options.SkipReparsePoints &&
+                (attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
+            {
+                return true;
+            }
+
+            if (options.SkipHiddenAndSystemDirectories &&
+                (((attributes & FileAttributes.Hidden) == FileAttributes.Hidden) ||
+                 ((attributes & FileAttributes.System) == FileAttributes.System)))
+            {
+                return true;
+            }
+        }
+        catch
+        {
+            return true;
+        }
+
+        if (!options.ExcludeLikelySystemAndProgramDirectories)
+        {
+            return false;
+        }
+
+        var relativePath = Path.GetRelativePath(rootPath, directoryPath);
+        if (string.IsNullOrWhiteSpace(relativePath) || relativePath == ".")
+        {
+            return false;
+        }
+
+        var segments = relativePath
+            .Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 0)
+        {
+            return false;
+        }
+
+        if (ExcludedTopLevelDirectoryNames.Contains(segments[0]))
+        {
+            return true;
+        }
+
+        return segments.Any(segment => ExcludedSegmentNames.Contains(segment));
     }
 
     private static void ReportProgress(

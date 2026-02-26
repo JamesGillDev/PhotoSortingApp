@@ -1,8 +1,88 @@
 <Application x:Class="PhotoSortingApp.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:PhotoSortingApp.App">
+             xmlns:converters="clr-namespace:PhotoSortingApp.App.Converters">
     <Application.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter" />
+
+        <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FFF7F8FA" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#FFF1F4F8" />
+        <SolidColorBrush x:Key="SurfaceBorderBrush" Color="#FFD7DCE4" />
+        <SolidColorBrush x:Key="AccentSoftBrush" Color="#FFEAF3FF" />
+        <SolidColorBrush x:Key="AccentSoftBorderBrush" Color="#FFC5DAFF" />
+        <SolidColorBrush x:Key="TileBackgroundBrush" Color="#FFFDFDFE" />
+        <SolidColorBrush x:Key="TileBorderBrush" Color="#FFE0E5ED" />
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FF101828" />
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#FF4A5568" />
+        <SolidColorBrush x:Key="ControlBackgroundBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="ControlBorderBrush" Color="#FFB9C2CF" />
+        <SolidColorBrush x:Key="ControlForegroundBrush" Color="#FF101828" />
+        <SolidColorBrush x:Key="DisabledForegroundBrush" Color="#FF8A94A6" />
+        <SolidColorBrush x:Key="SelectionBrush" Color="#FFCCE4FF" />
+
+        <Style TargetType="{x:Type Window}">
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+
+        <Style TargetType="{x:Type TextBlock}">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+
+        <Style TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style TargetType="{x:Type TextBox}">
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CaretBrush" Value="{DynamicResource ControlForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="{x:Type ComboBox}">
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style TargetType="{x:Type DatePicker}">
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style TargetType="{x:Type CheckBox}">
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="{x:Type ListBox}">
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style TargetType="{x:Type DataGrid}">
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Setter Property="RowBackground" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource SurfaceMutedBrush}" />
+            <Setter Property="GridLinesVisibility" Value="Horizontal" />
+        </Style>
+
+        <Style TargetType="{x:Type ProgressBar}">
+            <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource SelectionBrush}" />
+        </Style>
     </Application.Resources>
 </Application>

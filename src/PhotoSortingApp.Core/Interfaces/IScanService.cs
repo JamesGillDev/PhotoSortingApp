@@ -10,5 +10,9 @@ public interface IScanService
 
     Task UpdateDuplicateDetectionAsync(int scanRootId, bool enabled, CancellationToken cancellationToken = default);
 
-    Task<ScanResult> ScanAsync(int scanRootId, IProgress<ScanProgressInfo>? progress = null, CancellationToken cancellationToken = default);
+    Task<ScanResult> ScanAsync(
+        int scanRootId,
+        IProgress<ScanProgressInfo>? progress = null,
+        CancellationToken cancellationToken = default,
+        ScanOptions? options = null);
 }

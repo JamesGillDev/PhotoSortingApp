@@ -10,7 +10,7 @@
         MinHeight="700"
         MinWidth="1100"
         WindowStartupLocation="CenterScreen">
-    <Grid Background="#FFF7F8FA">
+    <Grid Background="{DynamicResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -21,8 +21,8 @@
         <Border Grid.Row="0"
                 Margin="12,12,12,8"
                 Padding="10"
-                Background="White"
-                BorderBrush="#FFD7DCE4"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource SurfaceBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="6">
             <DockPanel LastChildFill="False">
@@ -50,6 +50,11 @@
                             Padding="10,6"
                             Command="{Binding RescanCommand}"
                             Content="Start Rescan" />
+                    <Button Margin="0,0,8,0"
+                            Padding="10,6"
+                            Command="{Binding ScanWholeComputerCommand}"
+                            ToolTip="Scans fixed drives using safe exclusions to avoid system/program image noise."
+                            Content="Scan This PC" />
                     <Button Padding="10,6"
                             Command="{Binding CancelScanCommand}"
                             Content="Cancel Scan" />
@@ -58,6 +63,15 @@
                 <StackPanel Orientation="Horizontal"
                             DockPanel.Dock="Right"
                             VerticalAlignment="Center">
+                    <TextBlock Margin="0,0,8,0"
+                               VerticalAlignment="Center"
+                               FontWeight="SemiBold"
+                               Text="Theme:" />
+                    <ComboBox Width="110"
+                              Margin="0,0,12,0"
+                              DisplayMemberPath="DisplayName"
+                              ItemsSource="{Binding ThemeOptions}"
+                              SelectedItem="{Binding SelectedThemeOption}" />
                     <TextBlock Margin="0,0,8,0"
                                VerticalAlignment="Center"
                                FontWeight="SemiBold"
@@ -80,8 +94,8 @@
         <Border Grid.Row="1"
                 Margin="12,0,12,8"
                 Padding="8"
-                Background="#FFEAF3FF"
-                BorderBrush="#FFC5DAFF"
+                Background="{DynamicResource AccentSoftBrush}"
+                BorderBrush="{DynamicResource AccentSoftBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="6"
                 Visibility="{Binding IsIndexing, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -110,8 +124,8 @@
             <Border Grid.Column="0"
                     Margin="0,0,8,0"
                     Padding="8"
-                    Background="White"
-                    BorderBrush="#FFD7DCE4"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="6">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -178,8 +192,8 @@
             <Border Grid.Column="1"
                     Margin="0,0,8,0"
                     Padding="8"
-                    Background="White"
-                    BorderBrush="#FFD7DCE4"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="6">
                 <Grid>
@@ -189,52 +203,123 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0"
+                    <DockPanel Grid.Row="0"
                                Margin="0,0,0,8"
-                               FontWeight="SemiBold"
-                               Text="{Binding ResultsSummary}" />
+                               LastChildFill="True">
+                        <StackPanel Orientation="Horizontal"
+                                    DockPanel.Dock="Right"
+                                    VerticalAlignment="Center">
+                            <TextBlock Margin="0,0,6,0"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Text="Sort:" />
+                            <ComboBox Width="170"
+                                      Margin="0,0,10,0"
+                                      DisplayMemberPath="DisplayName"
+                                      ItemsSource="{Binding SortOptions}"
+                                      SelectedItem="{Binding SelectedSortOption}" />
+                            <TextBlock Margin="0,0,6,0"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Text="Layout:" />
+                            <ComboBox Width="95"
+                                      DisplayMemberPath="DisplayName"
+                                      ItemsSource="{Binding LayoutOptions}"
+                                      SelectedItem="{Binding SelectedLayoutOption}" />
+                        </StackPanel>
+                        <TextBlock VerticalAlignment="Center"
+                                   FontWeight="SemiBold"
+                                   Text="{Binding ResultsSummary}" />
+                    </DockPanel>
 
-                    <ScrollViewer Grid.Row="1"
-                                  VerticalScrollBarVisibility="Auto">
+                    <Grid Grid.Row="1">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      Visibility="{Binding IsTileLayout, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <ListBox BorderThickness="0"
+                                     Background="Transparent"
+                                     ItemsSource="{Binding Photos}"
+                                     SelectedItem="{Binding SelectedPhoto}">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="170"
+                                                Height="190"
+                                                Margin="6"
+                                                Padding="6"
+                                                Background="{DynamicResource TileBackgroundBrush}"
+                                                BorderBrush="{DynamicResource TileBorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6">
+                                            <StackPanel>
+                                                <Border Height="120"
+                                                        Background="{DynamicResource SurfaceMutedBrush}"
+                                                        CornerRadius="4">
+                                                    <Image Source="{Binding ThumbnailImage}"
+                                                           Stretch="UniformToFill" />
+                                                </Border>
+                                                <TextBlock Margin="0,6,0,0"
+                                                           FontWeight="SemiBold"
+                                                           Text="{Binding FileName}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock FontSize="11"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           Text="{Binding DateTakenText}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </ScrollViewer>
+
                         <ListBox BorderThickness="0"
+                                 Background="Transparent"
                                  ItemsSource="{Binding Photos}"
-                                 SelectedItem="{Binding SelectedPhoto}">
-                            <ListBox.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ListBox.ItemsPanel>
+                                 SelectedItem="{Binding SelectedPhoto}"
+                                 Visibility="{Binding IsTileLayout, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Width="170"
-                                            Height="190"
-                                            Margin="6"
-                                            Padding="6"
-                                            Background="#FFFDFDFE"
-                                            BorderBrush="#FFE0E5ED"
+                                    <Border Margin="0,0,0,6"
+                                            Padding="8"
+                                            Background="{DynamicResource TileBackgroundBrush}"
+                                            BorderBrush="{DynamicResource TileBorderBrush}"
                                             BorderThickness="1"
                                             CornerRadius="6">
-                                        <StackPanel>
-                                            <Border Height="120"
-                                                    Background="#FFF0F3F7"
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="92" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0"
+                                                    Width="84"
+                                                    Height="84"
+                                                    Background="{DynamicResource SurfaceMutedBrush}"
                                                     CornerRadius="4">
                                                 <Image Source="{Binding ThumbnailImage}"
                                                        Stretch="UniformToFill" />
                                             </Border>
-                                            <TextBlock Margin="0,6,0,0"
-                                                       FontWeight="SemiBold"
-                                                       Text="{Binding FileName}"
-                                                       TextTrimming="CharacterEllipsis" />
-                                            <TextBlock FontSize="11"
-                                                       Foreground="#FF4A5568"
-                                                       Text="{Binding DateTakenText}"
-                                                       TextTrimming="CharacterEllipsis" />
-                                        </StackPanel>
+                                            <StackPanel Grid.Column="1"
+                                                        Margin="10,0,0,0">
+                                                <TextBlock FontWeight="SemiBold"
+                                                           Text="{Binding FileName}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           Text="{Binding DateTakenText}" />
+                                                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           Text="{Binding FileSizeText}" />
+                                                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           Text="{Binding ResolutionText}" />
+                                            </StackPanel>
+                                        </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                    </ScrollViewer>
+                    </Grid>
 
                     <StackPanel Grid.Row="2"
                                 Margin="0,8,0,0"
@@ -249,8 +334,8 @@
 
             <Border Grid.Column="2"
                     Padding="8"
-                    Background="White"
-                    BorderBrush="#FFD7DCE4"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="6">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -259,7 +344,7 @@
                                    Text="Preview" />
                         <Border Height="240"
                                 Margin="0,4,0,8"
-                                Background="#FFF1F4F8"
+                                Background="{DynamicResource SurfaceMutedBrush}"
                                 CornerRadius="4">
                             <Image Source="{Binding PreviewImage}"
                                    Stretch="Uniform" />
@@ -343,7 +428,7 @@
                         <TextBlock FontWeight="SemiBold"
                                    Text="Organizer Plan (Dry-Run)" />
                         <TextBlock Margin="0,4,0,8"
-                                   Foreground="#FF4A5568"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"
                                    Text="{Binding PlanSummary}" />
                         <StackPanel Margin="0,0,0,8"
@@ -353,8 +438,7 @@
                                     Command="{Binding BuildOrganizerPlanCommand}"
                                     Content="Build Plan" />
                             <Button Padding="10,6"
-                                    IsEnabled="False"
-                                    ToolTip="Apply coming in v2"
+                                    Command="{Binding ApplyOrganizerPlanCommand}"
                                     Content="Apply Plan" />
                         </StackPanel>
                         <DataGrid Height="240"
@@ -380,8 +464,8 @@
         <Border Grid.Row="3"
                 Margin="12,0,12,12"
                 Padding="8"
-                Background="White"
-                BorderBrush="#FFD7DCE4"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource SurfaceBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="6">
             <TextBlock Text="{Binding StatusMessage}" />

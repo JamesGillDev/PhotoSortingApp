@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using PhotoSortingApp.App.Services;
+using PhotoSortingApp.App.Theming;
 using PhotoSortingApp.App.Utils;
 using PhotoSortingApp.Domain.Enums;
 using PhotoSortingApp.Domain.Models;
@@ -25,11 +27,15 @@ public class MainViewModel : ObservableObject
     private bool _isLoadingPhotos;
     private int _nextPage = 1;
     private int _loadedCount;
+    private List<OrganizerPlanItem> _latestOrganizerPlanItems = new();
 
     private ScanRootItemViewModel? _selectedScanRoot;
     private SmartAlbumItemViewModel? _selectedAlbum;
     private FolderFilterItemViewModel? _selectedFolderFilter;
     private DateSourceOptionViewModel? _selectedDateSource;
+    private SortOptionViewModel? _selectedSortOption;
+    private LayoutOptionViewModel? _selectedLayoutOption;
+    private ThemeOptionViewModel? _selectedThemeOption;
     private DuplicateGroupItemViewModel? _selectedDuplicateGroup;
     private PhotoItemViewModel? _selectedPhoto;
     private BitmapImage? _previewImage;
@@ -65,9 +71,37 @@ public class MainViewModel : ObservableObject
             new() { DisplayName = "Unknown", Value = DateTakenSource.Unknown }
         };
         SelectedDateSource = DateSourceOptions[0];
+        SortOptions = new ObservableCollection<SortOptionViewModel>
+        {
+            new() { DisplayName = "Date Taken (Newest)", Value = PhotoSortOption.DateTakenNewest },
+            new() { DisplayName = "Date Taken (Oldest)", Value = PhotoSortOption.DateTakenOldest },
+            new() { DisplayName = "Date Indexed (Newest)", Value = PhotoSortOption.DateAddedNewest },
+            new() { DisplayName = "Date Indexed (Oldest)", Value = PhotoSortOption.DateAddedOldest },
+            new() { DisplayName = "File Size (Largest)", Value = PhotoSortOption.FileSizeLargest },
+            new() { DisplayName = "File Size (Smallest)", Value = PhotoSortOption.FileSizeSmallest },
+            new() { DisplayName = "Name (A-Z)", Value = PhotoSortOption.NameAscending },
+            new() { DisplayName = "Name (Z-A)", Value = PhotoSortOption.NameDescending }
+        };
+        SelectedSortOption = SortOptions[0];
+
+        LayoutOptions = new ObservableCollection<LayoutOptionViewModel>
+        {
+            new() { DisplayName = "Tiles", Value = GalleryLayoutMode.Tiles },
+            new() { DisplayName = "List", Value = GalleryLayoutMode.List }
+        };
+        SelectedLayoutOption = LayoutOptions[0];
+
+        ThemeOptions = new ObservableCollection<ThemeOptionViewModel>
+        {
+            new() { DisplayName = "System", Value = AppThemePreference.System },
+            new() { DisplayName = "Light", Value = AppThemePreference.Light },
+            new() { DisplayName = "Dark", Value = AppThemePreference.Dark }
+        };
+        SelectedThemeOption = ThemeOptions[0];
 
         SelectFolderCommand = new AsyncRelayCommand(SelectFolderAsync);
         RefreshScanRootsCommand = new AsyncRelayCommand(RefreshScanRootsAsync);
+        ScanWholeComputerCommand = new AsyncRelayCommand(ScanWholeComputerAsync, () => !IsIndexing);
         RescanCommand = new AsyncRelayCommand(RescanAsync, () => SelectedScanRoot is not null && !IsIndexing);
         CancelScanCommand = new RelayCommand(CancelScan, () => IsIndexing);
         ApplyFiltersCommand = new AsyncRelayCommand(() => LoadPhotosAsync(reset: true), () => SelectedScanRoot is not null);
@@ -75,6 +109,7 @@ public class MainViewModel : ObservableObject
         LoadMoreCommand = new AsyncRelayCommand(() => LoadPhotosAsync(reset: false), () => SelectedScanRoot is not null && HasMoreResults);
         OpenFileLocationCommand = new RelayCommand(OpenFileLocation, () => SelectedPhoto is not null);
         BuildOrganizerPlanCommand = new AsyncRelayCommand(BuildOrganizerPlanAsync, () => SelectedScanRoot is not null);
+        ApplyOrganizerPlanCommand = new AsyncRelayCommand(ApplyOrganizerPlanAsync, () => SelectedScanRoot is not null && _latestOrganizerPlanItems.Count > 0 && !IsIndexing);
         RefreshDuplicatesCommand = new AsyncRelayCommand(RefreshDuplicatesAsync, () => SelectedScanRoot is not null && EnableDuplicateDetection);
     }
 
@@ -86,6 +121,12 @@ public class MainViewModel : ObservableObject
 
     public ObservableCollection<DateSourceOptionViewModel> DateSourceOptions { get; }
 
+    public ObservableCollection<SortOptionViewModel> SortOptions { get; }
+
+    public ObservableCollection<LayoutOptionViewModel> LayoutOptions { get; }
+
+    public ObservableCollection<ThemeOptionViewModel> ThemeOptions { get; }
+
     public ObservableCollection<DuplicateGroupItemViewModel> DuplicateGroups { get; }
 
     public ObservableCollection<PhotoItemViewModel> Photos { get; }
@@ -95,6 +136,8 @@ public class MainViewModel : ObservableObject
     public ICommand SelectFolderCommand { get; }
 
     public ICommand RefreshScanRootsCommand { get; }
+
+    public ICommand ScanWholeComputerCommand { get; }
 
     public ICommand RescanCommand { get; }
 
@@ -109,6 +152,8 @@ public class MainViewModel : ObservableObject
     public ICommand OpenFileLocationCommand { get; }
 
     public ICommand BuildOrganizerPlanCommand { get; }
+
+    public ICommand ApplyOrganizerPlanCommand { get; }
 
     public ICommand RefreshDuplicatesCommand { get; }
 
@@ -154,6 +199,51 @@ public class MainViewModel : ObservableObject
     {
         get => _selectedDateSource;
         set => SetProperty(ref _selectedDateSource, value);
+    }
+
+    public SortOptionViewModel? SelectedSortOption
+    {
+        get => _selectedSortOption;
+        set
+        {
+            if (!SetProperty(ref _selectedSortOption, value))
+            {
+                return;
+            }
+
+            if (_isReady && SelectedScanRoot is not null)
+            {
+                _ = LoadPhotosAsync(reset: true);
+            }
+        }
+    }
+
+    public LayoutOptionViewModel? SelectedLayoutOption
+    {
+        get => _selectedLayoutOption;
+        set
+        {
+            if (!SetProperty(ref _selectedLayoutOption, value))
+            {
+                return;
+            }
+
+            RaisePropertyChanged(nameof(IsTileLayout));
+        }
+    }
+
+    public ThemeOptionViewModel? SelectedThemeOption
+    {
+        get => _selectedThemeOption;
+        set
+        {
+            if (!SetProperty(ref _selectedThemeOption, value))
+            {
+                return;
+            }
+
+            ApplyThemePreference(value?.Value ?? AppThemePreference.System);
+        }
     }
 
     public DuplicateGroupItemViewModel? SelectedDuplicateGroup
@@ -291,6 +381,8 @@ public class MainViewModel : ObservableObject
 
     public string ResultsSummary => $"{Photos.Count} loaded / {TotalResults} matched";
 
+    public bool IsTileLayout => SelectedLayoutOption?.Value != GalleryLayoutMode.List;
+
     public async Task InitializeAsync()
     {
         await RefreshScanRootsAsync().ConfigureAwait(true);
@@ -305,19 +397,27 @@ public class MainViewModel : ObservableObject
             SmartAlbums.Clear();
             FolderFilters.Clear();
             DuplicateGroups.Clear();
+            OrganizerPreviewItems.Clear();
+            _latestOrganizerPlanItems.Clear();
             SelectedPhoto = null;
             PreviewImage = null;
+            PlanSummary = "No organizer plan generated yet.";
             StatusMessage = "Select a folder to begin indexing.";
             RaisePropertyChanged(nameof(ResultsSummary));
+            RaiseCommandCanExecute();
             return;
         }
 
         _suppressDuplicateUpdate = true;
         EnableDuplicateDetection = SelectedScanRoot.EnableDuplicateDetection;
         _suppressDuplicateUpdate = false;
+        OrganizerPreviewItems.Clear();
+        _latestOrganizerPlanItems.Clear();
+        PlanSummary = "No organizer plan generated yet.";
 
         await RefreshFiltersAndAlbumsAsync().ConfigureAwait(true);
         await LoadPhotosAsync(reset: true).ConfigureAwait(true);
+        RaiseCommandCanExecute();
     }
 
     private async Task RefreshScanRootsAsync()
@@ -367,6 +467,102 @@ public class MainViewModel : ObservableObject
         await RefreshScanRootsAsync().ConfigureAwait(true);
         SelectedScanRoot = ScanRoots.FirstOrDefault(x => x.Id == selected.Id);
         StatusMessage = $"Selected root: {selected.RootPath}";
+    }
+
+    private async Task ScanWholeComputerAsync()
+    {
+        var fixedDrives = DriveInfo.GetDrives()
+            .Where(x => x.IsReady && x.DriveType == DriveType.Fixed)
+            .Select(x => x.RootDirectory.FullName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (fixedDrives.Count == 0)
+        {
+            StatusMessage = "No fixed drives are available for whole-computer scan.";
+            return;
+        }
+
+        _scanCts?.Cancel();
+        _scanCts = new CancellationTokenSource();
+
+        IsIndexing = true;
+        IndexingPercent = 0;
+        IndexingStatus = "Preparing whole-computer scan (safe mode)...";
+        StatusMessage = "Whole-computer scan started. System and program folders are excluded.";
+
+        try
+        {
+            var scanRoots = new List<ScanRoot>();
+            foreach (var driveRoot in fixedDrives)
+            {
+                _scanCts.Token.ThrowIfCancellationRequested();
+                var scanRoot = await _services.ScanService
+                    .GetOrCreateScanRootAsync(driveRoot, EnableDuplicateDetection, _scanCts.Token)
+                    .ConfigureAwait(true);
+                scanRoots.Add(scanRoot);
+            }
+
+            var aggregate = new ScanResult();
+            for (var index = 0; index < scanRoots.Count; index++)
+            {
+                _scanCts.Token.ThrowIfCancellationRequested();
+                var root = scanRoots[index];
+                var currentIndex = index;
+                var progress = new Progress<ScanProgressInfo>(info =>
+                {
+                    var processed = info.FilesIndexed + info.FilesUpdated + info.FilesSkipped;
+                    var drivePercent = info.FilesFound > 0
+                        ? Math.Min(100d, processed * 100d / info.FilesFound)
+                        : 0d;
+                    IndexingPercent = Math.Min(100d, ((currentIndex + (drivePercent / 100d)) / scanRoots.Count) * 100d);
+                    IndexingStatus =
+                        $"Drive {root.RootPath} ({currentIndex + 1}/{scanRoots.Count})  Found: {info.FilesFound}  Indexed: {info.FilesIndexed}  Updated: {info.FilesUpdated}  Skipped: {info.FilesSkipped}  Elapsed: {info.Elapsed:hh\\:mm\\:ss}";
+                });
+
+                var result = await _services.ScanService
+                    .ScanAsync(root.Id, progress, _scanCts.Token, ScanOptions.WholeComputerSafeDefaults)
+                    .ConfigureAwait(true);
+
+                aggregate.FilesFound += result.FilesFound;
+                aggregate.FilesIndexed += result.FilesIndexed;
+                aggregate.FilesUpdated += result.FilesUpdated;
+                aggregate.FilesSkipped += result.FilesSkipped;
+                aggregate.FilesRemoved += result.FilesRemoved;
+                aggregate.Duration += result.Duration;
+                IndexingPercent = Math.Min(100d, ((currentIndex + 1d) / scanRoots.Count) * 100d);
+            }
+
+            await RefreshScanRootsAsync().ConfigureAwait(true);
+            if (scanRoots.Count > 0)
+            {
+                SelectedScanRoot = ScanRoots.FirstOrDefault(x => x.Id == scanRoots[0].Id) ?? SelectedScanRoot;
+            }
+
+            if (SelectedScanRoot is not null)
+            {
+                await RefreshFiltersAndAlbumsAsync().ConfigureAwait(true);
+                await LoadPhotosAsync(reset: true).ConfigureAwait(true);
+            }
+
+            StatusMessage =
+                $"Whole-computer scan complete across {scanRoots.Count} drive(s). Found {aggregate.FilesFound}, indexed {aggregate.FilesIndexed}, updated {aggregate.FilesUpdated}, removed {aggregate.FilesRemoved}. Safe exclusions reduced app/program image noise.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Whole-computer scan canceled.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Whole-computer scan failed: {ex.Message}";
+        }
+        finally
+        {
+            IsIndexing = false;
+            _scanCts?.Dispose();
+            _scanCts = null;
+        }
     }
 
     private async Task RescanAsync()
@@ -582,6 +778,7 @@ public class MainViewModel : ObservableObject
             DateSource = SelectedDateSource?.Value,
             FolderSubpath = string.IsNullOrWhiteSpace(SelectedFolderFilter?.Value) ? null : SelectedFolderFilter!.Value,
             AlbumKey = albumKey,
+            SortBy = SelectedSortOption?.Value ?? PhotoSortOption.DateTakenNewest,
             Page = page,
             PageSize = PageSize
         };
@@ -671,19 +868,77 @@ public class MainViewModel : ObservableObject
                 .CreatePlanAsync(new OrganizerPlanRequest { ScanRootId = SelectedScanRoot.Id })
                 .ConfigureAwait(true);
 
+            _latestOrganizerPlanItems = plan.Items.ToList();
             OrganizerPreviewItems.Clear();
-            foreach (var item in plan.Items.Take(100))
+            foreach (var item in _latestOrganizerPlanItems.Take(100))
             {
                 OrganizerPreviewItems.Add(item);
             }
 
             PlanSummary =
-                $"Dry-run plan created at {plan.GeneratedUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss}. {plan.TotalMoves} of {plan.TotalEvaluated} files would move. Showing first {OrganizerPreviewItems.Count}.";
-            StatusMessage = "Organizer plan generated and logged. Apply remains disabled in v1.";
+                $"Plan created at {plan.GeneratedUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss}. {plan.TotalMoves} of {plan.TotalEvaluated} files can move. Showing first {OrganizerPreviewItems.Count}.";
+            StatusMessage = "Organizer plan generated. Review and apply when ready.";
+            RaiseCommandCanExecute();
         }
         catch (Exception ex)
         {
             StatusMessage = $"Failed to create organizer plan: {ex.Message}";
+        }
+    }
+
+    private async Task ApplyOrganizerPlanAsync()
+    {
+        if (SelectedScanRoot is null || _latestOrganizerPlanItems.Count == 0)
+        {
+            return;
+        }
+
+        var confirmation = System.Windows.MessageBox.Show(
+            $"Apply organizer plan for {SelectedScanRoot.RootPath}?{Environment.NewLine}" +
+            $"Moves to apply: {_latestOrganizerPlanItems.Count}",
+            "Apply Organizer Plan",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning);
+        if (confirmation != System.Windows.MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            IsIndexing = true;
+            IndexingPercent = 0;
+            IndexingStatus = "Applying organizer plan...";
+            StatusMessage = "Applying organizer plan...";
+
+            var result = await _services.OrganizerPlanService
+                .ApplyPlanAsync(SelectedScanRoot.Id, _latestOrganizerPlanItems)
+                .ConfigureAwait(true);
+
+            _latestOrganizerPlanItems.Clear();
+            OrganizerPreviewItems.Clear();
+            PlanSummary = "No organizer plan generated yet.";
+
+            await RefreshScanRootsAsync().ConfigureAwait(true);
+            if (SelectedScanRoot is not null)
+            {
+                await RefreshFiltersAndAlbumsAsync().ConfigureAwait(true);
+                await LoadPhotosAsync(reset: true).ConfigureAwait(true);
+            }
+
+            IndexingPercent = 100;
+            StatusMessage =
+                $"Organizer apply complete. Attempted {result.AttemptedMoves}, moved {result.Moved}, skipped {result.Skipped}, failed {result.Failed}.";
+            RaiseCommandCanExecute();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Failed to apply organizer plan: {ex.Message}";
+        }
+        finally
+        {
+            IsIndexing = false;
+            IndexingStatus = string.Empty;
         }
     }
 
@@ -745,8 +1000,17 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    private static void ApplyThemePreference(AppThemePreference preference)
+    {
+        if (System.Windows.Application.Current is App app)
+        {
+            app.ApplyTheme(preference);
+        }
+    }
+
     private void RaiseCommandCanExecute()
     {
+        ((AsyncRelayCommand)ScanWholeComputerCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)RescanCommand).RaiseCanExecuteChanged();
         ((RelayCommand)CancelScanCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)ApplyFiltersCommand).RaiseCanExecuteChanged();
@@ -754,6 +1018,7 @@ public class MainViewModel : ObservableObject
         ((AsyncRelayCommand)LoadMoreCommand).RaiseCanExecuteChanged();
         ((RelayCommand)OpenFileLocationCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)BuildOrganizerPlanCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)ApplyOrganizerPlanCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)RefreshDuplicatesCommand).RaiseCanExecuteChanged();
     }
 }

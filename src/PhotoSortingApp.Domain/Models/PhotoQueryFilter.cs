@@ -18,6 +18,8 @@ public class PhotoQueryFilter
 
     public string? AlbumKey { get; set; }
 
+    public PhotoSortOption SortBy { get; set; } = PhotoSortOption.DateTakenNewest;
+
     public int Page { get; set; } = 1;
 
     public int PageSize { get; set; } = 120;

@@ -14,7 +14,7 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
 
 - Local-first: no cloud dependency in v1
 - Safety-first file operations: scan/index is read-only
-- Organizer is dry-run only in v1 (apply is disabled)
+- Organizer apply requires explicit confirmation and logs every move
 - Incremental performance for large folders
 
 ## v1 Features
@@ -26,7 +26,22 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
   - fallback to file timestamps
 - Incremental updates by file size + last write time
 - Index progress with cancellation
+- `Scan This PC` option:
+  - scans fixed local drives in safe mode
+  - excludes likely system/program locations (`Windows`, `Program Files`, `ProgramData`, `AppData`, etc.) to reduce non-user image noise
 - Gallery with thumbnail cache (`App_Data/ThumbCache`)
+- Gallery layout options:
+  - Tiles (default)
+  - List
+- Sort options:
+  - date taken
+  - date indexed
+  - file size
+  - file name
+- Theme options:
+  - System (matches Windows app theme)
+  - Light
+  - Dark
 - Filters:
   - date range
   - date source
@@ -43,7 +58,7 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
 - Dry-run organizer plan:
   - Year/Month folder strategy
   - preview + operation logging
-  - `Apply Plan` intentionally disabled in v1
+  - optional `Apply Plan` execution with confirmation
 
 ## Solution Layout
 
@@ -132,7 +147,7 @@ These are implemented as empty services in v1 so AI can be added later without a
 
 - HEIC decoding/metadata depends on local Windows codec support.
 - Thumbnail generation uses `System.Drawing.Common` and is Windows-targeted.
-- Organizer apply is disabled in v1 (dry-run only).
+- Organizer apply has no built-in undo yet (moves are logged to organizer logs).
 - Notes editing UI is not yet implemented.
 
 ## Roadmap

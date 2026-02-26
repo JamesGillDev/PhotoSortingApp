@@ -8,6 +8,8 @@ namespace PhotoSortingApp.Data.Services;
 
 public class OrganizerPlanService : IOrganizerPlanService
 {
+    private const int SaveBatchSize = 50;
+
     private readonly Func<PhotoCatalogDbContext> _contextFactory;
     private readonly string _logPath;
 
@@ -78,6 +80,132 @@ public class OrganizerPlanService : IOrganizerPlanService
         return result;
     }
 
+    public async Task<OrganizerApplyResult> ApplyPlanAsync(
+        int scanRootId,
+        IReadOnlyList<OrganizerPlanItem> planItems,
+        CancellationToken cancellationToken = default)
+    {
+        if (planItems.Count == 0)
+        {
+            return new OrganizerApplyResult();
+        }
+
+        using var db = _contextFactory();
+        var root = await db.ScanRoots
+            .SingleAsync(x => x.Id == scanRootId, cancellationToken)
+            .ConfigureAwait(false);
+
+        var photoIds = planItems
+            .Select(x => x.PhotoId)
+            .Distinct()
+            .ToList();
+        var assets = await db.PhotoAssets
+            .Where(x => x.ScanRootId == scanRootId && photoIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        var errors = new List<string>();
+        var attempted = 0;
+        var moved = 0;
+        var skipped = 0;
+        var failed = 0;
+        var pendingWrites = 0;
+        var occupiedTargets = new HashSet<string>(
+            assets.Values.Select(x => x.FullPath),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in planItems)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            attempted++;
+
+            if (string.IsNullOrWhiteSpace(item.SourcePath) || string.IsNullOrWhiteSpace(item.DestinationPath))
+            {
+                skipped++;
+                errors.Add($"Skipped photo {item.PhotoId}: missing source or destination path.");
+                continue;
+            }
+
+            var sourcePath = Path.GetFullPath(item.SourcePath);
+            var destinationPath = Path.GetFullPath(item.DestinationPath);
+            if (PathsEqual(sourcePath, destinationPath))
+            {
+                skipped++;
+                continue;
+            }
+
+            if (!File.Exists(sourcePath))
+            {
+                skipped++;
+                errors.Add($"Skipped photo {item.PhotoId}: source file not found -> {sourcePath}");
+                continue;
+            }
+
+            try
+            {
+                var targetDirectory = Path.GetDirectoryName(destinationPath);
+                if (string.IsNullOrWhiteSpace(targetDirectory))
+                {
+                    skipped++;
+                    errors.Add($"Skipped photo {item.PhotoId}: invalid destination path -> {destinationPath}");
+                    continue;
+                }
+
+                Directory.CreateDirectory(targetDirectory);
+                if (occupiedTargets.Contains(destinationPath) || File.Exists(destinationPath))
+                {
+                    destinationPath = ResolveUniqueTarget(destinationPath, occupiedTargets);
+                }
+
+                File.Move(sourcePath, destinationPath);
+                occupiedTargets.Remove(sourcePath);
+                occupiedTargets.Add(destinationPath);
+
+                if (assets.TryGetValue(item.PhotoId, out var asset))
+                {
+                    var destinationInfo = new FileInfo(destinationPath);
+                    asset.FullPath = destinationPath;
+                    asset.FileName = Path.GetFileName(destinationPath);
+                    asset.Extension = Path.GetExtension(destinationPath).ToLowerInvariant();
+                    asset.FolderPath = Path.GetDirectoryName(destinationPath) ?? string.Empty;
+                    asset.FileCreatedUtc = destinationInfo.CreationTimeUtc;
+                    asset.FileLastWriteUtc = destinationInfo.LastWriteTimeUtc;
+                    asset.UpdatedUtc = DateTime.UtcNow;
+                    pendingWrites++;
+                }
+
+                moved++;
+                if (pendingWrites >= SaveBatchSize)
+                {
+                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                    pendingWrites = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                errors.Add($"Failed photo {item.PhotoId}: {ex.Message}");
+            }
+        }
+
+        if (pendingWrites > 0 || db.ChangeTracker.HasChanges())
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        var result = new OrganizerApplyResult
+        {
+            AttemptedMoves = attempted,
+            Moved = moved,
+            Skipped = skipped,
+            Failed = failed,
+            Errors = errors
+        };
+
+        await AppendApplyLogAsync(root.RootPath, result, cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+
     private async Task AppendPlanLogAsync(string rootPath, OrganizerPlanResult result, CancellationToken cancellationToken)
     {
         var builder = new StringBuilder();
@@ -85,6 +213,19 @@ public class OrganizerPlanService : IOrganizerPlanService
         foreach (var item in result.Items)
         {
             builder.AppendLine($"PLAN: {item.SourcePath} => {item.DestinationPath}");
+        }
+
+        await File.AppendAllTextAsync(_logPath, builder.ToString(), cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task AppendApplyLogAsync(string rootPath, OrganizerApplyResult result, CancellationToken cancellationToken)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine(
+            $"[{DateTime.UtcNow:O}] APPLY Root={rootPath} Attempted={result.AttemptedMoves} Moved={result.Moved} Skipped={result.Skipped} Failed={result.Failed}");
+        foreach (var error in result.Errors.Take(50))
+        {
+            builder.AppendLine($"APPLY-ERROR: {error}");
         }
 
         await File.AppendAllTextAsync(_logPath, builder.ToString(), cancellationToken).ConfigureAwait(false);

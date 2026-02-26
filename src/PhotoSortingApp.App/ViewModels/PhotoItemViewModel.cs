@@ -32,9 +32,37 @@ public class PhotoItemViewModel : ObservableObject
         ? $"{Asset.Width.Value} x {Asset.Height.Value}"
         : "(unknown)";
 
+    public string FileSizeText => Asset.FileSizeBytes <= 0
+        ? "(unknown)"
+        : FormatFileSize(Asset.FileSizeBytes);
+
     public BitmapImage? ThumbnailImage
     {
         get => _thumbnailImage;
         set => SetProperty(ref _thumbnailImage, value);
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        const double kb = 1024d;
+        const double mb = kb * 1024d;
+        const double gb = mb * 1024d;
+
+        if (bytes >= gb)
+        {
+            return $"{bytes / gb:F2} GB";
+        }
+
+        if (bytes >= mb)
+        {
+            return $"{bytes / mb:F1} MB";
+        }
+
+        if (bytes >= kb)
+        {
+            return $"{bytes / kb:F0} KB";
+        }
+
+        return $"{bytes} B";
     }
 }

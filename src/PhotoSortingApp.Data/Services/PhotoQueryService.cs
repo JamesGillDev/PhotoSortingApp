@@ -72,10 +72,9 @@ public class PhotoQueryService : IPhotoQueryService
         var page = Math.Max(1, filter.Page);
         var pageSize = Math.Clamp(filter.PageSize, 20, 500);
 
+        query = ApplySort(query, filter.SortBy);
+
         var items = await query
-            .OrderByDescending(x => x.DateTaken)
-            .ThenByDescending(x => x.IndexedUtc)
-            .ThenBy(x => x.FileName)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken)
@@ -265,5 +264,39 @@ public class PhotoQueryService : IPhotoQueryService
         }
 
         return query;
+    }
+
+    private static IQueryable<PhotoAsset> ApplySort(IQueryable<PhotoAsset> query, PhotoSortOption sortBy)
+    {
+        return sortBy switch
+        {
+            PhotoSortOption.DateTakenOldest => query
+                .OrderBy(x => x.DateTaken == null)
+                .ThenBy(x => x.DateTaken)
+                .ThenBy(x => x.FileName),
+            PhotoSortOption.DateAddedNewest => query
+                .OrderByDescending(x => x.IndexedUtc)
+                .ThenBy(x => x.FileName),
+            PhotoSortOption.DateAddedOldest => query
+                .OrderBy(x => x.IndexedUtc)
+                .ThenBy(x => x.FileName),
+            PhotoSortOption.FileSizeLargest => query
+                .OrderByDescending(x => x.FileSizeBytes)
+                .ThenBy(x => x.FileName),
+            PhotoSortOption.FileSizeSmallest => query
+                .OrderBy(x => x.FileSizeBytes)
+                .ThenBy(x => x.FileName),
+            PhotoSortOption.NameAscending => query
+                .OrderBy(x => x.FileName)
+                .ThenByDescending(x => x.IndexedUtc),
+            PhotoSortOption.NameDescending => query
+                .OrderByDescending(x => x.FileName)
+                .ThenByDescending(x => x.IndexedUtc),
+            _ => query
+                .OrderByDescending(x => x.DateTaken != null)
+                .ThenByDescending(x => x.DateTaken)
+                .ThenByDescending(x => x.IndexedUtc)
+                .ThenBy(x => x.FileName)
+        };
     }
 }
