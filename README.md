@@ -60,11 +60,17 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
 
 ## Build and Run
 
+Run these commands from the repository root (`PhotoSorting_EditorApp`):
+
 ```powershell
 dotnet restore PhotoSortingApp.sln
 dotnet build PhotoSortingApp.sln
-dotnet run --project src/PhotoSortingApp.App/PhotoSortingApp.App.csproj
+dotnet run --project .\src\PhotoSortingApp.App\PhotoSortingApp.App.csproj
 ```
+
+This launches the Windows desktop app window (WPF).
+
+If you run `dotnet run` from `PhotoSorting_EditorApp/PhotoSorting_EditorApp`, you'll start the sample web host and see `Hello World` instead.
 
 ## Database and Migrations
 

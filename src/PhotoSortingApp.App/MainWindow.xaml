@@ -92,7 +92,7 @@
                              Margin="8,0,0,0"
                              VerticalAlignment="Center"
                              Maximum="100"
-                             Value="{Binding IndexingPercent}" />
+                             Value="{Binding IndexingPercent, Mode=OneWay}" />
                 <TextBlock VerticalAlignment="Center"
                            FontWeight="SemiBold"
                            Text="{Binding IndexingStatus}" />
