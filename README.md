@@ -3,6 +3,7 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/UI-WPF-512BD4)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![EF%20Core](https://img.shields.io/badge/EF%20Core-8.0-5C2D91)](https://learn.microsoft.com/ef/core/)
+[![Version](https://img.shields.io/badge/Version-1.0.1-brightgreen)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-BLS%201.1-blue.svg)](./LICENSE.md)
 
 PhotoSortingApp is a local-first Windows desktop photo catalog and safe organizer planner.
@@ -91,6 +92,27 @@ dotnet tool run dotnet-ef migrations add <MigrationName> --project src/PhotoSort
 ```powershell
 dotnet publish src/PhotoSortingApp.App/PhotoSortingApp.App.csproj -c Release -r win-x64 --self-contained false -o artifacts/publish/win-x64
 ```
+
+## Versioning and Public GitHub Releases
+
+- Current release version: `1.0.1`
+- Release history and iteration notes: [`CHANGELOG.md`](./CHANGELOG.md)
+- Build version metadata source: `Directory.Build.props`
+
+Current release iteration history:
+
+- `v1.0.0` (2026-02-25): Initial public release.
+- `v1.0.1` (2026-02-26): Added centralized version metadata and public release iteration tracking.
+
+Tag and publish a new GitHub release iteration:
+
+```powershell
+git tag v1.0.1
+git push origin main
+git push origin v1.0.1
+```
+
+Then create a GitHub Release from the `v1.0.1` tag and copy the matching section from `CHANGELOG.md` into the release notes.
 
 ## AI Extension Points (v1 Stubs)
 
