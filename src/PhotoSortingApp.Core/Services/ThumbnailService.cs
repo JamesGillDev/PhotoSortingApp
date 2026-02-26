@@ -1,12 +1,14 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Runtime.Versioning;
 using PhotoSortingApp.Core.Infrastructure;
 using PhotoSortingApp.Core.Interfaces;
 using PhotoSortingApp.Domain.Models;
 
 namespace PhotoSortingApp.Core.Services;
 
+[SupportedOSPlatform("windows")]
 public class ThumbnailService : IThumbnailService
 {
     private readonly string _cacheDirectory;

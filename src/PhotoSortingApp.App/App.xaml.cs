@@ -5,6 +5,7 @@ using PhotoSortingApp.App.Services;
 using PhotoSortingApp.App.Theming;
 using PhotoSortingApp.App.ViewModels;
 using MediaColor = System.Windows.Media.Color;
+using WpfSystemColors = System.Windows.SystemColors;
 
 namespace PhotoSortingApp.App;
 
@@ -78,6 +79,23 @@ public partial class App : System.Windows.Application
             SetBrushColor("ControlForegroundBrush", MediaColor.FromRgb(0xEE, 0xF2, 0xF8));
             SetBrushColor("DisabledForegroundBrush", MediaColor.FromRgb(0x8D, 0x9A, 0xAD));
             SetBrushColor("SelectionBrush", MediaColor.FromRgb(0x4C, 0x74, 0xA8));
+            SetBrushColor("ControlPopupBackgroundBrush", MediaColor.FromRgb(0x23, 0x2F, 0x3F));
+            SetBrushColor("ControlPopupBorderBrush", MediaColor.FromRgb(0x45, 0x57, 0x70));
+            SetBrushColor("ControlHoverBrush", MediaColor.FromRgb(0x2E, 0x3D, 0x52));
+            SetBrushColor("ControlPressedBrush", MediaColor.FromRgb(0x39, 0x4B, 0x65));
+            SetBrushColor("ControlSelectionBackgroundBrush", MediaColor.FromRgb(0x4C, 0x74, 0xA8));
+            SetBrushColor("ControlSelectionForegroundBrush", MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
+            SetBrushColor("ControlDisabledBackgroundBrush", MediaColor.FromRgb(0x1D, 0x27, 0x35));
+
+            SetBrushColor(WpfSystemColors.WindowBrushKey, MediaColor.FromRgb(0x23, 0x2F, 0x3F));
+            SetBrushColor(WpfSystemColors.WindowTextBrushKey, MediaColor.FromRgb(0xEE, 0xF2, 0xF8));
+            SetBrushColor(WpfSystemColors.ControlBrushKey, MediaColor.FromRgb(0x23, 0x2F, 0x3F));
+            SetBrushColor(WpfSystemColors.ControlTextBrushKey, MediaColor.FromRgb(0xEE, 0xF2, 0xF8));
+            SetBrushColor(WpfSystemColors.HighlightBrushKey, MediaColor.FromRgb(0x4C, 0x74, 0xA8));
+            SetBrushColor(WpfSystemColors.HighlightTextBrushKey, MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
+            SetBrushColor(WpfSystemColors.GrayTextBrushKey, MediaColor.FromRgb(0x8D, 0x9A, 0xAD));
+            SetBrushColor(WpfSystemColors.InactiveSelectionHighlightBrushKey, MediaColor.FromRgb(0x2E, 0x3D, 0x52));
+            SetBrushColor(WpfSystemColors.InactiveSelectionHighlightTextBrushKey, MediaColor.FromRgb(0xEE, 0xF2, 0xF8));
         }
         else
         {
@@ -96,6 +114,23 @@ public partial class App : System.Windows.Application
             SetBrushColor("ControlForegroundBrush", MediaColor.FromRgb(0x10, 0x18, 0x28));
             SetBrushColor("DisabledForegroundBrush", MediaColor.FromRgb(0x8A, 0x94, 0xA6));
             SetBrushColor("SelectionBrush", MediaColor.FromRgb(0xCC, 0xE4, 0xFF));
+            SetBrushColor("ControlPopupBackgroundBrush", MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
+            SetBrushColor("ControlPopupBorderBrush", MediaColor.FromRgb(0xB9, 0xC2, 0xCF));
+            SetBrushColor("ControlHoverBrush", MediaColor.FromRgb(0xEA, 0xF3, 0xFF));
+            SetBrushColor("ControlPressedBrush", MediaColor.FromRgb(0xDC, 0xEA, 0xFF));
+            SetBrushColor("ControlSelectionBackgroundBrush", MediaColor.FromRgb(0x2F, 0x6F, 0xB8));
+            SetBrushColor("ControlSelectionForegroundBrush", MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
+            SetBrushColor("ControlDisabledBackgroundBrush", MediaColor.FromRgb(0xE6, 0xEB, 0xF2));
+
+            SetBrushColor(WpfSystemColors.WindowBrushKey, MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
+            SetBrushColor(WpfSystemColors.WindowTextBrushKey, MediaColor.FromRgb(0x10, 0x18, 0x28));
+            SetBrushColor(WpfSystemColors.ControlBrushKey, MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
+            SetBrushColor(WpfSystemColors.ControlTextBrushKey, MediaColor.FromRgb(0x10, 0x18, 0x28));
+            SetBrushColor(WpfSystemColors.HighlightBrushKey, MediaColor.FromRgb(0x2F, 0x6F, 0xB8));
+            SetBrushColor(WpfSystemColors.HighlightTextBrushKey, MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
+            SetBrushColor(WpfSystemColors.GrayTextBrushKey, MediaColor.FromRgb(0x8A, 0x94, 0xA6));
+            SetBrushColor(WpfSystemColors.InactiveSelectionHighlightBrushKey, MediaColor.FromRgb(0xDC, 0xEA, 0xFF));
+            SetBrushColor(WpfSystemColors.InactiveSelectionHighlightTextBrushKey, MediaColor.FromRgb(0x10, 0x18, 0x28));
         }
     }
 
@@ -134,14 +169,8 @@ public partial class App : System.Windows.Application
         return false;
     }
 
-    private void SetBrushColor(string resourceKey, MediaColor color)
+    private void SetBrushColor(object resourceKey, MediaColor color)
     {
-        if (Resources[resourceKey] is SolidColorBrush brush)
-        {
-            brush.Color = color;
-            return;
-        }
-
         Resources[resourceKey] = new SolidColorBrush(color);
     }
 }
