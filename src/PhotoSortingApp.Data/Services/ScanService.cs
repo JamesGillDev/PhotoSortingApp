@@ -324,6 +324,7 @@ public class ScanService : IScanService
             }
 
             if (options.SkipHiddenAndSystemDirectories &&
+                !PathsEqual(directoryPath, rootPath) &&
                 (((attributes & FileAttributes.Hidden) == FileAttributes.Hidden) ||
                  ((attributes & FileAttributes.System) == FileAttributes.System)))
             {

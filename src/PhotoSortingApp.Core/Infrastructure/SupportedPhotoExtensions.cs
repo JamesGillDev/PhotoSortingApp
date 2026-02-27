@@ -7,7 +7,12 @@ public static class SupportedPhotoExtensions
         ".jpg",
         ".jpeg",
         ".png",
-        ".heic"
+        ".heic",
+        ".webp",
+        ".gif",
+        ".bmp",
+        ".tif",
+        ".tiff"
     };
 
     public static bool IsSupported(string path)
