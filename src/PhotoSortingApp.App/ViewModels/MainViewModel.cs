@@ -709,7 +709,7 @@ public class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Whole-computer scan failed: {ex.Message}";
+            StatusMessage = $"Whole-computer scan failed: {BuildExceptionMessage(ex)}";
         }
         finally
         {
@@ -804,7 +804,7 @@ public class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Scan failed: {ex.Message}";
+            StatusMessage = $"Scan failed: {BuildExceptionMessage(ex)}";
         }
         finally
         {
@@ -1849,6 +1849,22 @@ public class MainViewModel : ObservableObject
         {
             app.ApplyTheme(preference);
         }
+    }
+
+    private static string BuildExceptionMessage(Exception ex)
+    {
+        if (ex is AggregateException aggregate && aggregate.InnerExceptions.Count > 0)
+        {
+            ex = aggregate.InnerExceptions[0];
+        }
+
+        var cursor = ex;
+        while (cursor.InnerException is not null)
+        {
+            cursor = cursor.InnerException;
+        }
+
+        return string.IsNullOrWhiteSpace(cursor.Message) ? ex.Message : cursor.Message;
     }
 
     private void RaiseCommandCanExecute()

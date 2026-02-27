@@ -36,7 +36,8 @@ public class PhotoCatalogDbContext : DbContext
             entity.Property(x => x.Notes).HasMaxLength(4000);
             entity.Property(x => x.TagsCsv).HasMaxLength(2000);
 
-            entity.HasIndex(x => x.FullPath).IsUnique();
+            entity.HasIndex(x => x.FullPath);
+            entity.HasIndex(x => new { x.ScanRootId, x.FullPath }).IsUnique();
             entity.HasIndex(x => x.ScanRootId);
             entity.HasIndex(x => x.DateTaken);
             entity.HasIndex(x => x.Sha256);
