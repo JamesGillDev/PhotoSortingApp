@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.3.0] - 2026-02-27
+
+### Added
+- Manual identity assignment now supports comma-separated multi-ID input for both people and animals, with save applied across all selected photos.
+- New context scanning action for selected photos that can add structured tags for environment, event, holiday, season, time-of-day, shot type, subjects, and scene hints (including scenery/artwork).
+- Context scan preview text on selected photo details to show what labels are currently inferred.
+
+### Changed
+- Identity scan now merges detected IDs with existing IDs and avoids creating redundant undo entries when no changes are detected.
+- Duplicate Groups header layout spacing was adjusted so the `Refresh` button no longer overlaps nearby text.
+- Smart rename suggestions and batch smart rename continue using the standardized timestamp-first format for more specific filenames.
+
 ## [1.2.0] - 2026-02-27
 
 ### Added

@@ -49,7 +49,7 @@
                     <Button Margin="0,0,8,0"
                             Padding="10,6"
                             Command="{Binding RescanCommand}"
-                            Content="Start Rescan" />
+                            Content="Start Scan" />
                     <Button Margin="0,0,8,0"
                             Padding="10,6"
                             Command="{Binding ScanWholeComputerCommand}"
@@ -187,11 +187,14 @@
                                   ItemsSource="{Binding FolderFilters}"
                                   SelectedItem="{Binding SelectedFolderFilter}" />
 
-                        <DockPanel Margin="0,0,0,4">
+                        <DockPanel Margin="0,0,0,4"
+                                   LastChildFill="False">
                             <TextBlock DockPanel.Dock="Left"
+                                       Margin="0,0,8,0"
                                        FontWeight="SemiBold"
                                        Text="Duplicate Groups" />
                             <Button DockPanel.Dock="Right"
+                                    Margin="8,0,0,0"
                                     Padding="8,2"
                                     Command="{Binding RefreshDuplicatesCommand}"
                                     Content="Refresh" />
@@ -475,6 +478,10 @@
                                  Text="{Binding RenameInput, UpdateSourceTrigger=PropertyChanged}" />
                         <TextBlock Margin="0,0,0,6"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="Format: yyyyMMdd_HHmmss_subject_context.ext"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Margin="0,0,0,6"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    Text="{Binding SmartRenameSummary}"
                                    TextWrapping="Wrap" />
                         <StackPanel Margin="0,0,0,10"
@@ -497,10 +504,36 @@
                         <TextBlock Margin="0,4,0,6"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    Text="{Binding SelectedPhotosSummary}" />
+                        <TextBlock Margin="0,0,0,6"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="Scan for IDs, edit manually, then Save IDs to all selected photos."
+                                   TextWrapping="Wrap" />
+                        <TextBlock Text="People IDs (comma-separated):" />
+                        <TextBox Margin="0,4,0,6"
+                                 ToolTip="Example: alice,bob,team_lead"
+                                 Text="{Binding PeopleInputText, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Text="Animal IDs (comma-separated):" />
+                        <TextBox Margin="0,4,0,6"
+                                 ToolTip="Example: dog_1,cat_2"
+                                 Text="{Binding AnimalInputText, UpdateSourceTrigger=PropertyChanged}" />
+                        <StackPanel Margin="0,0,0,10"
+                                    Orientation="Horizontal">
+                            <Button Margin="0,0,8,0"
+                                    Padding="10,6"
+                                    Command="{Binding IdentifyPeopleAnimalsCommand}"
+                                    Content="Scan People / Animals" />
+                            <Button Padding="10,6"
+                                    Command="{Binding SaveDetectedSubjectsCommand}"
+                                    Content="Save IDs" />
+                        </StackPanel>
+                        <TextBlock Margin="0,0,0,6"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="{Binding ContextScanSummary}"
+                                   TextWrapping="Wrap" />
                         <Button Margin="0,0,0,10"
                                 Padding="10,6"
-                                Command="{Binding IdentifyPeopleAnimalsCommand}"
-                                Content="Scan People / Animals" />
+                                Command="{Binding ScanContextTagsCommand}"
+                                Content="Scan Environment / Event / Scene Tags" />
 
                         <TextBlock FontWeight="SemiBold"
                                    Text="Tags" />

@@ -17,6 +17,33 @@ namespace PhotoSortingApp.App.ViewModels;
 public class MainViewModel : ObservableObject
 {
     private const int PageSize = 120;
+    private static readonly Dictionary<string, string> EventKeywordMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["wedding"] = "wedding",
+        ["birthday"] = "birthday",
+        ["anniversary"] = "anniversary",
+        ["graduation"] = "graduation",
+        ["party"] = "party",
+        ["concert"] = "concert",
+        ["festival"] = "festival",
+        ["vacation"] = "travel",
+        ["travel"] = "travel",
+        ["hike"] = "outdoor_trip",
+        ["picnic"] = "outdoor_trip",
+        ["meeting"] = "business",
+        ["conference"] = "business",
+        ["school"] = "school",
+        ["sports"] = "sports",
+        ["game"] = "sports"
+    };
+    private static readonly HashSet<string> ScenerySignals = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "landscape", "beach", "ocean", "mountain", "forest", "lake", "river", "park", "garden", "sunset", "sunrise", "nature"
+    };
+    private static readonly HashSet<string> ArtworkSignals = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "art", "artwork", "painting", "sculpture", "mural", "museum", "gallery", "statue"
+    };
 
     private readonly AppServices _services;
     private CancellationTokenSource? _scanCts;
@@ -56,6 +83,9 @@ public class MainViewModel : ObservableObject
     private string _detectedPeopleText = string.Empty;
     private string _detectedAnimalsText = string.Empty;
     private string _smartRenameSummary = string.Empty;
+    private string _peopleInputText = string.Empty;
+    private string _animalInputText = string.Empty;
+    private string _contextScanSummary = string.Empty;
     private string _statusMessage = "Select a folder to begin indexing.";
     private string _indexingStatus = string.Empty;
     private string _planSummary = "No organizer plan generated yet.";
@@ -133,6 +163,8 @@ public class MainViewModel : ObservableObject
         RenamePhotoCommand = new AsyncRelayCommand(RenamePhotoAsync, () => SelectedPhoto is not null && !string.IsNullOrWhiteSpace(RenameInput));
         SmartRenameSelectedCommand = new AsyncRelayCommand(SmartRenameSelectedAsync, () => SelectedPhotosCount > 0 && !_isApplyingSmartActions && !IsIndexing);
         IdentifyPeopleAnimalsCommand = new AsyncRelayCommand(IdentifyPeopleAnimalsAsync, () => SelectedPhotosCount > 0 && !_isApplyingSmartActions && !IsIndexing);
+        SaveDetectedSubjectsCommand = new AsyncRelayCommand(SaveDetectedSubjectsAsync, () => SelectedPhotosCount > 0 && !_isApplyingSmartActions && !IsIndexing);
+        ScanContextTagsCommand = new AsyncRelayCommand(ScanContextTagsAsync, () => SelectedPhotosCount > 0 && !_isApplyingSmartActions && !IsIndexing);
         MovePhotoCommand = new AsyncRelayCommand(MovePhotoAsync, () => SelectedPhoto is not null && !IsIndexing);
         CopyPhotoCommand = new AsyncRelayCommand(CopyPhotoAsync, () => SelectedPhoto is not null && !IsIndexing);
         DuplicatePhotoCommand = new AsyncRelayCommand(DuplicatePhotoAsync, () => SelectedPhoto is not null && !IsIndexing);
@@ -203,6 +235,10 @@ public class MainViewModel : ObservableObject
     public ICommand SmartRenameSelectedCommand { get; }
 
     public ICommand IdentifyPeopleAnimalsCommand { get; }
+
+    public ICommand SaveDetectedSubjectsCommand { get; }
+
+    public ICommand ScanContextTagsCommand { get; }
 
     public ICommand MovePhotoCommand { get; }
 
@@ -482,6 +518,40 @@ public class MainViewModel : ObservableObject
         private set => SetProperty(ref _smartRenameSummary, value);
     }
 
+    public string PeopleInputText
+    {
+        get => _peopleInputText;
+        set
+        {
+            if (!SetProperty(ref _peopleInputText, value))
+            {
+                return;
+            }
+
+            RaiseCommandCanExecute();
+        }
+    }
+
+    public string AnimalInputText
+    {
+        get => _animalInputText;
+        set
+        {
+            if (!SetProperty(ref _animalInputText, value))
+            {
+                return;
+            }
+
+            RaiseCommandCanExecute();
+        }
+    }
+
+    public string ContextScanSummary
+    {
+        get => _contextScanSummary;
+        private set => SetProperty(ref _contextScanSummary, value);
+    }
+
     public string StatusMessage
     {
         get => _statusMessage;
@@ -618,6 +688,9 @@ public class MainViewModel : ObservableObject
             DetectedPeopleText = string.Empty;
             DetectedAnimalsText = string.Empty;
             SmartRenameSummary = string.Empty;
+            ContextScanSummary = string.Empty;
+            PeopleInputText = string.Empty;
+            AnimalInputText = string.Empty;
             _latestOrganizerPlanItems.Clear();
             SelectedPhoto = null;
             PreviewImage = null;
@@ -640,6 +713,9 @@ public class MainViewModel : ObservableObject
         DetectedPeopleText = string.Empty;
         DetectedAnimalsText = string.Empty;
         SmartRenameSummary = string.Empty;
+        ContextScanSummary = string.Empty;
+        PeopleInputText = string.Empty;
+        AnimalInputText = string.Empty;
         OrganizerPreviewItems.Clear();
         _latestOrganizerPlanItems.Clear();
         PlanSummary = "No organizer plan generated yet.";
@@ -1162,6 +1238,9 @@ public class MainViewModel : ObservableObject
             DetectedPeopleText = string.Empty;
             DetectedAnimalsText = string.Empty;
             SmartRenameSummary = string.Empty;
+            ContextScanSummary = string.Empty;
+            PeopleInputText = string.Empty;
+            AnimalInputText = string.Empty;
             return;
         }
 
@@ -1182,8 +1261,9 @@ public class MainViewModel : ObservableObject
             }
 
             PopulateRenameSuggestions(selected, tags, analysis);
-            ApplyDetectedIdentityText(analysis.DetectedPeople, analysis.DetectedAnimals, storedPeople, storedAnimals);
+            ApplyDetectedIdentityText(analysis.DetectedPeople, analysis.DetectedAnimals, storedPeople, storedAnimals, syncInputFields: true);
             SmartRenameSummary = BuildSmartSummary(analysis);
+            ContextScanSummary = BuildContextSummary(analysis);
         }
         catch (OperationCanceledException)
         {
@@ -1192,8 +1272,9 @@ public class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             PopulateRenameSuggestions(selected, Array.Empty<string>(), null);
-            ApplyDetectedIdentityText(Array.Empty<string>(), Array.Empty<string>(), storedPeople, storedAnimals);
+            ApplyDetectedIdentityText(Array.Empty<string>(), Array.Empty<string>(), storedPeople, storedAnimals, syncInputFields: true);
             SmartRenameSummary = string.Empty;
+            ContextScanSummary = string.Empty;
             StatusMessage = $"Unable to load tags for selected photo: {ex.Message}";
         }
     }
@@ -1202,41 +1283,9 @@ public class MainViewModel : ObservableObject
     {
         RenameSuggestions.Clear();
 
-        var extension = NormalizeExtension(photo.Extension);
-        var localDate = (photo.Asset.DateTaken ?? photo.Asset.FileLastWriteUtc).ToLocalTime();
-        var camera = $"{photo.Asset.CameraMake} {photo.Asset.CameraModel}".Trim();
-        var folderName = Path.GetFileName(photo.Asset.FolderPath);
-
-        if (analysis is not null && !string.IsNullOrWhiteSpace(analysis.SuggestedBaseName))
-        {
-            AddRenameSuggestion($"{analysis.SuggestedBaseName}{extension}");
-        }
-
-        AddRenameSuggestion($"IMG_{localDate:yyyyMMdd_HHmmss}{extension}");
-
-        if (!string.IsNullOrWhiteSpace(camera))
-        {
-            AddRenameSuggestion($"{SanitizeFileToken(camera)}_{localDate:yyyyMMdd_HHmmss}{extension}");
-        }
-
-        if (tags.Count > 0)
-        {
-            var tagToken = string.Join("_", tags.Take(3).Select(SanitizeFileToken));
-            AddRenameSuggestion($"{tagToken}_{localDate:yyyyMMdd}{extension}");
-        }
-
-        if (analysis is not null && analysis.SubjectTags.Count > 0)
-        {
-            var subjectToken = string.Join("_", analysis.SubjectTags.Take(3).Select(SanitizeFileToken));
-            AddRenameSuggestion($"{localDate:yyyyMMdd}_{subjectToken}{extension}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(folderName))
-        {
-            AddRenameSuggestion($"{SanitizeFileToken(folderName)}_{localDate:yyyyMMdd_HHmm}{extension}");
-        }
-
-        AddRenameSuggestion($"{SanitizeFileToken(Path.GetFileNameWithoutExtension(photo.FileName))}{extension}");
+        AddRenameSuggestion(BuildStandardizedFileName(photo.Asset, analysis, tags, includeCameraToken: false));
+        AddRenameSuggestion(BuildStandardizedFileName(photo.Asset, analysis, tags, includeCameraToken: true));
+        AddRenameSuggestion(BuildTimestampedSourceName(photo.Asset));
 
         SelectedRenameSuggestion = RenameSuggestions.FirstOrDefault();
     }
@@ -1330,16 +1379,7 @@ public class MainViewModel : ObservableObject
                         .AnalyzeAsync(current, tags)
                         .ConfigureAwait(true);
 
-                    var baseName = string.IsNullOrWhiteSpace(analysis.SuggestedBaseName)
-                        ? SanitizeFileToken(Path.GetFileNameWithoutExtension(current.FileName))
-                        : SanitizeFileToken(analysis.SuggestedBaseName);
-                    if (string.IsNullOrWhiteSpace(baseName))
-                    {
-                        skipped++;
-                        continue;
-                    }
-
-                    var targetName = BuildRequestedFileName(baseName, current.Extension);
+                    var targetName = BuildStandardizedFileName(current, analysis, tags, includeCameraToken: true);
                     if (string.Equals(targetName, current.FileName, StringComparison.OrdinalIgnoreCase))
                     {
                         skipped++;
@@ -1404,7 +1444,9 @@ public class MainViewModel : ObservableObject
         _isApplyingSmartActions = true;
         RaiseCommandCanExecute();
 
-        var updated = 0;
+        var changed = 0;
+        var unchanged = 0;
+        var detected = 0;
         var failed = 0;
         var previousValues = new List<(int PhotoId, IReadOnlyList<string> People, IReadOnlyList<string> Animals)>();
         var preferredId = selection[0].Id;
@@ -1424,14 +1466,29 @@ public class MainViewModel : ObservableObject
                         continue;
                     }
 
+                    var existingPeople = ParseCsvIds(current.PeopleCsv);
+                    var existingAnimals = ParseCsvIds(current.AnimalsCsv);
                     var tags = await _services.TaggingService.GetTagsAsync(item.Id).ConfigureAwait(true);
                     var analysis = await _services.SmartRenameService
                         .AnalyzeAsync(current, tags)
                         .ConfigureAwait(true);
 
-                    previousValues.Add((item.Id, ParseCsvIds(current.PeopleCsv), ParseCsvIds(current.AnimalsCsv)));
+                    var mergedPeople = MergeIdentityIds(existingPeople, analysis.DetectedPeople);
+                    var mergedAnimals = MergeIdentityIds(existingAnimals, analysis.DetectedAnimals);
+                    if (mergedPeople.Count > 0 || mergedAnimals.Count > 0)
+                    {
+                        detected++;
+                    }
+
+                    if (IdentityListsEqual(existingPeople, mergedPeople) &&
+                        IdentityListsEqual(existingAnimals, mergedAnimals))
+                    {
+                        unchanged++;
+                        continue;
+                    }
+
                     var persisted = await _services.PhotoEditService
-                        .UpdateDetectedSubjectsAsync(item.Id, analysis.DetectedPeople, analysis.DetectedAnimals)
+                        .UpdateDetectedSubjectsAsync(item.Id, mergedPeople, mergedAnimals)
                         .ConfigureAwait(true);
                     if (persisted is null)
                     {
@@ -1439,7 +1496,8 @@ public class MainViewModel : ObservableObject
                         continue;
                     }
 
-                    updated++;
+                    previousValues.Add((item.Id, existingPeople, existingAnimals));
+                    changed++;
                 }
                 catch
                 {
@@ -1447,10 +1505,10 @@ public class MainViewModel : ObservableObject
                 }
             }
 
-            if (updated > 0)
+            if (changed > 0)
             {
                 PushUndoAction(
-                    $"Identify people/animals ({updated} photo(s))",
+                    $"Identify people/animals ({changed} photo(s))",
                     async () =>
                     {
                         foreach (var action in previousValues)
@@ -1466,7 +1524,239 @@ public class MainViewModel : ObservableObject
             }
 
             await RefreshAfterPhotoMutationAsync(preferredId, refreshFilters: false).ConfigureAwait(true);
-            StatusMessage = $"Identity scan complete. Updated {updated}, failed {failed}.";
+            if (changed == 0 && detected == 0)
+            {
+                var visionConfigured = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
+                StatusMessage = visionConfigured
+                    ? "Identity scan complete. No people/animals were detected. You can enter IDs manually and click Save IDs."
+                    : "Identity scan complete. No people/animals were detected. Enter IDs manually and click Save IDs, or set OPENAI_API_KEY for better detection.";
+            }
+            else
+            {
+                StatusMessage = $"Identity scan complete. Updated {changed}, unchanged {unchanged}, detected {detected}, failed {failed}.";
+            }
+        }
+        finally
+        {
+            _isApplyingSmartActions = false;
+            RaiseCommandCanExecute();
+        }
+    }
+
+    private async Task SaveDetectedSubjectsAsync()
+    {
+        var selection = GetBatchSelection();
+        if (selection.Count == 0)
+        {
+            return;
+        }
+
+        var inputPeople = ParseIdentityInput(PeopleInputText);
+        var inputAnimals = ParseIdentityInput(AnimalInputText);
+        if (inputPeople.Count == 0 && inputAnimals.Count == 0)
+        {
+            StatusMessage = "Enter one or more People/Animal IDs before saving.";
+            return;
+        }
+
+        _isApplyingSmartActions = true;
+        RaiseCommandCanExecute();
+
+        var changed = 0;
+        var unchanged = 0;
+        var failed = 0;
+        var preferredId = selection[0].Id;
+        var previousValues = new List<(int PhotoId, IReadOnlyList<string> People, IReadOnlyList<string> Animals)>();
+
+        try
+        {
+            foreach (var item in selection)
+            {
+                try
+                {
+                    var current = await _services.PhotoEditService
+                        .GetPhotoByIdAsync(item.Id)
+                        .ConfigureAwait(true);
+                    if (current is null)
+                    {
+                        failed++;
+                        continue;
+                    }
+
+                    var previousPeople = ParseCsvIds(current.PeopleCsv);
+                    var previousAnimals = ParseCsvIds(current.AnimalsCsv);
+                    var mergedPeople = MergeIdentityIds(previousPeople, inputPeople);
+                    var mergedAnimals = MergeIdentityIds(previousAnimals, inputAnimals);
+                    if (IdentityListsEqual(previousPeople, mergedPeople) &&
+                        IdentityListsEqual(previousAnimals, mergedAnimals))
+                    {
+                        unchanged++;
+                        continue;
+                    }
+
+                    var updated = await _services.PhotoEditService
+                        .UpdateDetectedSubjectsAsync(current.Id, mergedPeople, mergedAnimals)
+                        .ConfigureAwait(true);
+                    if (updated is null)
+                    {
+                        failed++;
+                        continue;
+                    }
+
+                    previousValues.Add((current.Id, previousPeople, previousAnimals));
+                    changed++;
+                }
+                catch
+                {
+                    failed++;
+                }
+            }
+
+            if (changed > 0)
+            {
+                PushUndoAction(
+                    $"Identity IDs saved ({changed} photo(s))",
+                    async () =>
+                    {
+                        foreach (var action in previousValues)
+                        {
+                            await _services.PhotoEditService
+                                .UpdateDetectedSubjectsAsync(action.PhotoId, action.People, action.Animals)
+                                .ConfigureAwait(true);
+                        }
+
+                        await RefreshAfterPhotoMutationAsync(preferredId, refreshFilters: false).ConfigureAwait(true);
+                        return $"Undo complete: restored identity IDs for {previousValues.Count} photo(s).";
+                    });
+            }
+
+            await RefreshAfterPhotoMutationAsync(preferredId, refreshFilters: false).ConfigureAwait(true);
+            if (changed == 0 && failed == 0)
+            {
+                StatusMessage = "Identity IDs are already present on all selected photos.";
+            }
+            else
+            {
+                StatusMessage = $"Identity IDs saved. Updated {changed}, unchanged {unchanged}, failed {failed}.";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Saving identity IDs failed: {ex.Message}";
+        }
+        finally
+        {
+            _isApplyingSmartActions = false;
+            RaiseCommandCanExecute();
+        }
+    }
+
+    private async Task ScanContextTagsAsync()
+    {
+        var selection = GetBatchSelection();
+        if (selection.Count == 0)
+        {
+            return;
+        }
+
+        _isApplyingSmartActions = true;
+        RaiseCommandCanExecute();
+
+        var changed = 0;
+        var unchanged = 0;
+        var failed = 0;
+        var totalContextTagsAdded = 0;
+        var preferredId = selection[0].Id;
+        var previousValues = new List<(int PhotoId, IReadOnlyList<string> Tags)>();
+
+        try
+        {
+            StatusMessage = $"Scanning context tags for {selection.Count} photo(s)...";
+
+            foreach (var item in selection)
+            {
+                try
+                {
+                    var current = await _services.PhotoEditService
+                        .GetPhotoByIdAsync(item.Id)
+                        .ConfigureAwait(true);
+                    if (current is null)
+                    {
+                        failed++;
+                        continue;
+                    }
+
+                    var existingTags = await _services.TaggingService
+                        .GetTagsAsync(item.Id)
+                        .ConfigureAwait(true);
+                    var analysis = await _services.SmartRenameService
+                        .AnalyzeAsync(current, existingTags)
+                        .ConfigureAwait(true);
+                    var contextTags = BuildContextTagsFromAnalysis(analysis);
+                    if (contextTags.Count == 0)
+                    {
+                        unchanged++;
+                        continue;
+                    }
+
+                    var merged = existingTags
+                        .Concat(contextTags)
+                        .Select(NormalizeTag)
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                    if (TagListsEqual(existingTags, merged))
+                    {
+                        unchanged++;
+                        continue;
+                    }
+
+                    var updated = await _services.TaggingService
+                        .ReplaceTagsAsync(item.Id, merged)
+                        .ConfigureAwait(true);
+                    if (updated is null)
+                    {
+                        failed++;
+                        continue;
+                    }
+
+                    previousValues.Add((item.Id, existingTags));
+                    changed++;
+                    totalContextTagsAdded += contextTags.Count;
+                }
+                catch
+                {
+                    failed++;
+                }
+            }
+
+            if (changed > 0)
+            {
+                PushUndoAction(
+                    $"Context scan tags ({changed} photo(s))",
+                    async () =>
+                    {
+                        foreach (var action in previousValues)
+                        {
+                            await _services.TaggingService
+                                .ReplaceTagsAsync(action.PhotoId, action.Tags)
+                                .ConfigureAwait(true);
+                        }
+
+                        await RefreshAfterPhotoMutationAsync(preferredId, refreshFilters: false).ConfigureAwait(true);
+                        return $"Undo complete: restored previous tags for {previousValues.Count} photo(s).";
+                    });
+            }
+
+            await RefreshAfterPhotoMutationAsync(preferredId, refreshFilters: false).ConfigureAwait(true);
+            StatusMessage = changed == 0 && failed == 0
+                ? "Context scan complete. No new context tags were added."
+                : $"Context scan complete. Updated {changed}, unchanged {unchanged}, failed {failed}, context tags added {totalContextTagsAdded}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Context scan failed: {ex.Message}";
         }
         finally
         {
@@ -1953,7 +2243,8 @@ public class MainViewModel : ObservableObject
         IReadOnlyList<string> analysisPeople,
         IReadOnlyList<string> analysisAnimals,
         IReadOnlyList<string> storedPeople,
-        IReadOnlyList<string> storedAnimals)
+        IReadOnlyList<string> storedAnimals,
+        bool syncInputFields = false)
     {
         var people = analysisPeople
             .Concat(storedPeople)
@@ -1970,6 +2261,11 @@ public class MainViewModel : ObservableObject
 
         DetectedPeopleText = people.Count == 0 ? "(none)" : string.Join(", ", people);
         DetectedAnimalsText = animals.Count == 0 ? "(none)" : string.Join(", ", animals);
+        if (syncInputFields)
+        {
+            PeopleInputText = people.Count == 0 ? string.Empty : string.Join(", ", people);
+            AnimalInputText = animals.Count == 0 ? string.Empty : string.Join(", ", animals);
+        }
     }
 
     private static IReadOnlyList<string> ParseCsvIds(string? csv)
@@ -1985,6 +2281,275 @@ public class MainViewModel : ObservableObject
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static IReadOnlyList<string> ParseIdentityInput(string rawInput)
+    {
+        if (string.IsNullOrWhiteSpace(rawInput))
+        {
+            return Array.Empty<string>();
+        }
+
+        return rawInput
+            .Split(new[] { ',', ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(SanitizeFileToken)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IReadOnlyList<string> MergeIdentityIds(IReadOnlyList<string> existingIds, IReadOnlyList<string> newIds)
+    {
+        return existingIds
+            .Concat(newIds)
+            .Select(SanitizeFileToken)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static bool IdentityListsEqual(IReadOnlyList<string> left, IReadOnlyList<string> right)
+    {
+        var leftSet = left
+            .Select(SanitizeFileToken)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var rightSet = right
+            .Select(SanitizeFileToken)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return leftSet.SetEquals(rightSet);
+    }
+
+    private static bool TagListsEqual(IReadOnlyList<string> left, IReadOnlyList<string> right)
+    {
+        var leftSet = left
+            .Select(NormalizeTag)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var rightSet = right
+            .Select(NormalizeTag)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return leftSet.SetEquals(rightSet);
+    }
+
+    private static IReadOnlyList<string> BuildContextTagsFromAnalysis(SmartRenameAnalysis analysis)
+    {
+        var tags = new List<string>();
+
+        void AddTag(string category, string? value)
+        {
+            var token = NormalizeTagToken(value);
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return;
+            }
+
+            var tag = $"{category}:{token}";
+            if (tags.Any(x => x.Equals(tag, StringComparison.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+
+            tags.Add(tag);
+        }
+
+        AddTag("environment", analysis.Setting);
+        AddTag("season", analysis.Season);
+        AddTag("holiday", analysis.Holiday);
+        AddTag("time", analysis.TimeOfDay);
+        AddTag("shot", analysis.ShotType);
+        AddTag("event", InferEventToken(analysis));
+        AddTag("people_hint", analysis.PeopleHint);
+
+        foreach (var person in analysis.DetectedPeople.Take(4))
+        {
+            AddTag("person", person);
+        }
+
+        foreach (var animal in analysis.DetectedAnimals.Take(4))
+        {
+            AddTag("animal", animal);
+        }
+
+        foreach (var subject in analysis.SubjectTags.Take(6))
+        {
+            AddTag("subject", subject);
+        }
+
+        var sceneryMatch = analysis.ShotType?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true ||
+                           analysis.SubjectTags.Any(x => ScenerySignals.Contains(x)) ||
+                           ScenerySignals.Contains(analysis.Setting ?? string.Empty);
+        if (sceneryMatch)
+        {
+            AddTag("scene", "scenery");
+        }
+
+        var artworkMatch = analysis.SubjectTags.Any(x => ArtworkSignals.Contains(x)) ||
+                           ArtworkSignals.Contains(analysis.Setting ?? string.Empty);
+        if (artworkMatch)
+        {
+            AddTag("scene", "artwork");
+        }
+
+        return tags;
+    }
+
+    private static string BuildContextSummary(SmartRenameAnalysis analysis)
+    {
+        var contextTags = BuildContextTagsFromAnalysis(analysis);
+        if (contextTags.Count == 0)
+        {
+            return "Context labels: (none)";
+        }
+
+        return $"Context labels: {string.Join(", ", contextTags.Take(8))}";
+    }
+
+    private static string? InferEventToken(SmartRenameAnalysis analysis)
+    {
+        if (!string.IsNullOrWhiteSpace(analysis.Holiday))
+        {
+            return "holiday";
+        }
+
+        var candidates = new List<string>();
+        if (!string.IsNullOrWhiteSpace(analysis.PeopleHint))
+        {
+            candidates.Add(analysis.PeopleHint);
+        }
+
+        candidates.AddRange(analysis.SubjectTags);
+        if (!string.IsNullOrWhiteSpace(analysis.Summary))
+        {
+            candidates.AddRange(analysis.Summary.Split(
+                new[] { ' ', ',', '.', ';', ':', '-', '_', '\t', '\r', '\n', '/', '\\' },
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+
+        foreach (var candidate in candidates)
+        {
+            var normalized = NormalizeTagToken(candidate);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                continue;
+            }
+
+            if (EventKeywordMap.TryGetValue(normalized, out var mapped))
+            {
+                return mapped;
+            }
+        }
+
+        return null;
+    }
+
+    private static string NormalizeTagToken(string? value)
+    {
+        var normalized = SanitizeFileToken(value ?? string.Empty).ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(normalized) ? string.Empty : normalized;
+    }
+
+    private static string BuildStandardizedFileName(
+        PhotoAsset photo,
+        SmartRenameAnalysis? analysis,
+        IReadOnlyList<string> tags,
+        bool includeCameraToken)
+    {
+        var extension = NormalizeExtension(photo.Extension);
+        var timestamp = (photo.DateTaken ?? photo.FileLastWriteUtc).ToLocalTime().ToString("yyyyMMdd_HHmmss");
+        var descriptorTokens = BuildDescriptorTokens(photo, analysis, tags, includeCameraToken);
+        var descriptor = descriptorTokens.Count == 0
+            ? "photo"
+            : string.Join("_", descriptorTokens.Take(3));
+        var baseName = SanitizeFileToken($"{timestamp}_{descriptor}");
+        if (string.IsNullOrWhiteSpace(baseName))
+        {
+            baseName = $"{timestamp}_photo";
+        }
+
+        return $"{baseName}{extension}";
+    }
+
+    private static string BuildTimestampedSourceName(PhotoAsset photo)
+    {
+        var extension = NormalizeExtension(photo.Extension);
+        var timestamp = (photo.DateTaken ?? photo.FileLastWriteUtc).ToLocalTime().ToString("yyyyMMdd_HHmmss");
+        var sourceToken = SanitizeFileToken(Path.GetFileNameWithoutExtension(photo.FileName));
+        var baseName = string.IsNullOrWhiteSpace(sourceToken)
+            ? $"{timestamp}_photo"
+            : $"{timestamp}_{sourceToken}";
+        return $"{SanitizeFileToken(baseName)}{extension}";
+    }
+
+    private static IReadOnlyList<string> BuildDescriptorTokens(
+        PhotoAsset photo,
+        SmartRenameAnalysis? analysis,
+        IReadOnlyList<string> tags,
+        bool includeCameraToken)
+    {
+        var tokens = new List<string>();
+
+        void AddToken(string? value)
+        {
+            var normalized = SanitizeFileToken(value ?? string.Empty);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return;
+            }
+
+            if (tokens.Any(x => x.Equals(normalized, StringComparison.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+
+            tokens.Add(normalized);
+        }
+
+        if (analysis is not null)
+        {
+            AddToken(analysis.PeopleHint);
+            AddToken(analysis.Setting);
+            AddToken(analysis.ShotType);
+            foreach (var id in analysis.DetectedPeople.Take(2))
+            {
+                AddToken(id);
+            }
+
+            foreach (var subject in analysis.SubjectTags.Take(2))
+            {
+                AddToken(subject);
+            }
+
+            foreach (var part in analysis.SuggestedBaseName
+                         .Split('_', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                         .Take(2))
+            {
+                AddToken(part);
+            }
+        }
+
+        foreach (var tag in tags.Take(3))
+        {
+            AddToken(tag);
+        }
+
+        if (includeCameraToken)
+        {
+            AddToken(photo.CameraMake);
+            AddToken(photo.CameraModel);
+        }
+
+        AddToken(Path.GetFileName(photo.FolderPath));
+        if (tokens.Count == 0)
+        {
+            AddToken(Path.GetFileNameWithoutExtension(photo.FileName));
+        }
+
+        return tokens.Take(4).ToList();
     }
 
     private static string BuildSmartSummary(SmartRenameAnalysis analysis)
@@ -2277,6 +2842,8 @@ public class MainViewModel : ObservableObject
         ((AsyncRelayCommand)RenamePhotoCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)SmartRenameSelectedCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)IdentifyPeopleAnimalsCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)SaveDetectedSubjectsCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)ScanContextTagsCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)MovePhotoCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)CopyPhotoCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)DuplicatePhotoCommand).RaiseCanExecuteChanged();
