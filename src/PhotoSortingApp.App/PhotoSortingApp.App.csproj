@@ -13,12 +13,18 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Assets\PhotoSortingApp.ico" />
+    <Resource Include="Assets\PhotoSortingApp.ico" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\PhotoSortingApp.ico</ApplicationIcon>
   </PropertyGroup>
 
 </Project>

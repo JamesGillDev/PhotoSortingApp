@@ -1454,12 +1454,14 @@ public class MainViewModel : ObservableObject
         var unchanged = 0;
         var detected = 0;
         var failed = 0;
-        var previousValues = new List<(int PhotoId, IReadOnlyList<string> People, IReadOnlyList<string> Animals)>();
+        var contextTagged = 0;
+        var totalContextTagsAdded = 0;
+        var previousValues = new List<(int PhotoId, IReadOnlyList<string> People, IReadOnlyList<string> Animals, IReadOnlyList<string> Tags)>();
         var preferredId = selection[0].Id;
 
         try
         {
-            StatusMessage = $"Analyzing people/animals in {selection.Count} photo(s)...";
+            StatusMessage = $"Analyzing people/animals + context tags in {selection.Count} photo(s)...";
 
             foreach (var item in selection)
             {
@@ -1474,35 +1476,78 @@ public class MainViewModel : ObservableObject
 
                     var existingPeople = ParseCsvIds(current.PeopleCsv);
                     var existingAnimals = ParseCsvIds(current.AnimalsCsv);
-                    var tags = await _services.TaggingService.GetTagsAsync(item.Id).ConfigureAwait(true);
+                    var existingTags = await _services.TaggingService.GetTagsAsync(item.Id).ConfigureAwait(true);
                     var analysis = await _services.SmartRenameService
-                        .AnalyzeAsync(current, tags)
+                        .AnalyzeAsync(current, existingTags)
                         .ConfigureAwait(true);
 
                     var mergedPeople = MergeIdentityIds(existingPeople, analysis.DetectedPeople);
                     var mergedAnimals = MergeIdentityIds(existingAnimals, analysis.DetectedAnimals);
+                    var contextTags = BuildContextTagsFromAnalysis(analysis);
+                    var mergedTags = existingTags
+                        .Concat(contextTags)
+                        .Select(NormalizeTag)
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+
                     if (mergedPeople.Count > 0 || mergedAnimals.Count > 0)
                     {
                         detected++;
                     }
 
-                    if (IdentityListsEqual(existingPeople, mergedPeople) &&
-                        IdentityListsEqual(existingAnimals, mergedAnimals))
+                    var identityChanged = !IdentityListsEqual(existingPeople, mergedPeople) ||
+                                          !IdentityListsEqual(existingAnimals, mergedAnimals);
+                    var tagsChanged = !TagListsEqual(existingTags, mergedTags);
+                    if (!identityChanged && !tagsChanged)
                     {
                         unchanged++;
                         continue;
                     }
 
-                    var persisted = await _services.PhotoEditService
-                        .UpdateDetectedSubjectsAsync(item.Id, mergedPeople, mergedAnimals)
-                        .ConfigureAwait(true);
-                    if (persisted is null)
+                    if (identityChanged)
                     {
-                        failed++;
-                        continue;
+                        var persisted = await _services.PhotoEditService
+                            .UpdateDetectedSubjectsAsync(item.Id, mergedPeople, mergedAnimals)
+                            .ConfigureAwait(true);
+                        if (persisted is null)
+                        {
+                            failed++;
+                            continue;
+                        }
                     }
 
-                    previousValues.Add((item.Id, existingPeople, existingAnimals));
+                    if (tagsChanged)
+                    {
+                        var updatedTags = await _services.TaggingService
+                            .ReplaceTagsAsync(item.Id, mergedTags)
+                            .ConfigureAwait(true);
+                        if (updatedTags is null)
+                        {
+                            if (identityChanged)
+                            {
+                                await _services.PhotoEditService
+                                    .UpdateDetectedSubjectsAsync(item.Id, existingPeople, existingAnimals)
+                                    .ConfigureAwait(true);
+                            }
+
+                            failed++;
+                            continue;
+                        }
+
+                        contextTagged++;
+                        var normalizedExisting = existingTags
+                            .Select(NormalizeTag)
+                            .Where(x => !string.IsNullOrWhiteSpace(x))
+                            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                        totalContextTagsAdded += contextTags
+                            .Select(NormalizeTag)
+                            .Where(x => !string.IsNullOrWhiteSpace(x))
+                            .Count(tag => !normalizedExisting.Contains(tag));
+                    }
+
+                    previousValues.Add((item.Id, existingPeople, existingAnimals, existingTags));
                     changed++;
                 }
                 catch
@@ -1514,7 +1559,7 @@ public class MainViewModel : ObservableObject
             if (changed > 0)
             {
                 PushUndoAction(
-                    $"Identify people/animals ({changed} photo(s))",
+                    $"Identity/context scan ({changed} photo(s))",
                     async () =>
                     {
                         foreach (var action in previousValues)
@@ -1522,24 +1567,28 @@ public class MainViewModel : ObservableObject
                             await _services.PhotoEditService
                                 .UpdateDetectedSubjectsAsync(action.PhotoId, action.People, action.Animals)
                                 .ConfigureAwait(true);
+                            await _services.TaggingService
+                                .ReplaceTagsAsync(action.PhotoId, action.Tags)
+                                .ConfigureAwait(true);
                         }
 
                         await RefreshAfterPhotoMutationAsync(preferredId, refreshFilters: false).ConfigureAwait(true);
-                        return $"Undo complete: restored people/animal IDs for {previousValues.Count} photo(s).";
+                        return $"Undo complete: restored IDs and tags for {previousValues.Count} photo(s).";
                     });
             }
 
             await RefreshAfterPhotoMutationAsync(preferredId, refreshFilters: false).ConfigureAwait(true);
-            if (changed == 0 && detected == 0)
+            if (changed == 0 && detected == 0 && contextTagged == 0)
             {
                 var visionConfigured = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
                 StatusMessage = visionConfigured
-                    ? "Identity scan complete. No people/animals were detected. You can enter IDs manually and click Save IDs."
-                    : "Identity scan complete. No people/animals were detected. Enter IDs manually and click Save IDs, or set OPENAI_API_KEY for better detection.";
+                    ? "Identity/context scan complete. No people/animals were detected and no new context tags were added. You can enter IDs manually and click Save IDs."
+                    : "Identity/context scan complete. No people/animals were detected and no new context tags were added. Enter IDs manually and click Save IDs, or set OPENAI_API_KEY for better detection.";
             }
             else
             {
-                StatusMessage = $"Identity scan complete. Updated {changed}, unchanged {unchanged}, detected {detected}, failed {failed}.";
+                StatusMessage =
+                    $"Identity/context scan complete. Updated {changed}, unchanged {unchanged}, detected {detected}, context-tagged {contextTagged}, context tags added {totalContextTagsAdded}, failed {failed}.";
             }
         }
         finally
@@ -1642,6 +1691,14 @@ public class MainViewModel : ObservableObject
             else
             {
                 StatusMessage = $"Identity IDs saved to catalog + Windows file metadata (Subject/Comments/Tags when supported). Updated {changed}, unchanged {unchanged}, failed {failed}.";
+                if (changed > 0)
+                {
+                    System.Windows.MessageBox.Show(
+                        $"Saved IDs to {changed} photo(s).",
+                        "Save IDs",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
+                }
             }
         }
         catch (Exception ex)
@@ -1711,6 +1768,11 @@ public class MainViewModel : ObservableObject
 
             await RefreshAfterPhotoMutationAsync(selected.Id, refreshFilters: false).ConfigureAwait(true);
             StatusMessage = "Image saved to catalog + Windows file metadata (Subject/Comments/Tags when supported).";
+            System.Windows.MessageBox.Show(
+                "Image IDs were saved successfully.",
+                "Save Image",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
         }
         catch (Exception ex)
         {

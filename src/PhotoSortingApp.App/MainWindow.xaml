@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="PhotoSortingApp"
+        Icon="/PhotoSortingApp.App;component/Assets/PhotoSortingApp.ico"
         Height="960"
         Width="1540"
         MinHeight="700"
