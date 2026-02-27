@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.3.1] - 2026-02-27
+
+### Added
+- Dedicated `Save Image` action in the selected-photo panel so manual identity edits can be explicitly saved for one photo.
+- Double-click to open the selected image with the system default image viewer.
+- File metadata persistence now writes identity/context details to Windows properties (`Subject`, `Comments`, and `Tags/Keywords` where supported).
+
+### Changed
+- Enter key in People/Animal ID inputs now triggers image save behavior to reduce missed manual edits.
+- Duplicate Groups header spacing and top-bar control sizing were adjusted to prevent clipped text on common window widths.
+- Save status messaging now clarifies that metadata is written to Windows file property fields when supported by the file type/handler.
+
+### Fixed
+- Metadata persistence now initializes COM on the calling thread before property-store writes, fixing cases where ID/tag changes were saved in the catalog but not embedded into file properties.
+
 ## [1.3.0] - 2026-02-27
 
 ### Added

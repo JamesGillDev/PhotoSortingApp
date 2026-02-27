@@ -25,10 +25,9 @@
                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="6">
-            <DockPanel LastChildFill="False">
-                <StackPanel Orientation="Horizontal"
-                            DockPanel.Dock="Left"
-                            VerticalAlignment="Center">
+            <StackPanel>
+                <WrapPanel Margin="0,0,0,8"
+                           VerticalAlignment="Center">
                     <TextBlock Margin="0,0,8,0"
                                VerticalAlignment="Center"
                                FontWeight="SemiBold"
@@ -58,11 +57,9 @@
                     <Button Padding="10,6"
                             Command="{Binding CancelScanCommand}"
                             Content="Cancel Scan" />
-                </StackPanel>
+                </WrapPanel>
 
-                <StackPanel Orientation="Horizontal"
-                            DockPanel.Dock="Right"
-                            VerticalAlignment="Center">
+                <WrapPanel VerticalAlignment="Center">
                     <TextBlock Margin="0,0,8,0"
                                VerticalAlignment="Center"
                                FontWeight="SemiBold"
@@ -76,26 +73,41 @@
                                VerticalAlignment="Center"
                                FontWeight="SemiBold"
                                Text="Search:" />
-                    <TextBox Width="280"
+                    <TextBox Width="240"
                              Margin="0,0,8,0"
                              VerticalContentAlignment="Center"
-                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter"
+                                        Command="{Binding ApplyFiltersCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
                     <TextBlock Margin="0,0,8,0"
                                VerticalAlignment="Center"
                                FontWeight="SemiBold"
                                Text="Person ID:" />
-                    <TextBox Width="150"
+                    <TextBox Width="130"
                              Margin="0,0,8,0"
                              VerticalContentAlignment="Center"
-                             Text="{Binding PersonSearchText, UpdateSourceTrigger=PropertyChanged}" />
+                             Text="{Binding PersonSearchText, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter"
+                                        Command="{Binding ApplyFiltersCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
                     <TextBlock Margin="0,0,8,0"
                                VerticalAlignment="Center"
                                FontWeight="SemiBold"
                                Text="Animal ID:" />
-                    <TextBox Width="150"
+                    <TextBox Width="130"
                              Margin="0,0,8,0"
                              VerticalContentAlignment="Center"
-                             Text="{Binding AnimalSearchText, UpdateSourceTrigger=PropertyChanged}" />
+                             Text="{Binding AnimalSearchText, UpdateSourceTrigger=PropertyChanged}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter"
+                                        Command="{Binding ApplyFiltersCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
                     <Button Margin="0,0,8,0"
                             Padding="10,6"
                             Command="{Binding ApplyFiltersCommand}"
@@ -103,8 +115,8 @@
                     <Button Padding="10,6"
                             Command="{Binding ClearFiltersCommand}"
                             Content="Clear" />
-                </StackPanel>
-            </DockPanel>
+                </WrapPanel>
+            </StackPanel>
         </Border>
 
         <Border Grid.Row="1"
@@ -262,7 +274,8 @@
                                  ItemsSource="{Binding Photos}"
                                  SelectedItem="{Binding SelectedPhoto}"
                                  SelectionMode="Extended"
-                                 SelectionChanged="PhotoList_SelectionChanged"
+                                  SelectionChanged="PhotoList_SelectionChanged"
+                                 MouseDoubleClick="PhotoList_MouseDoubleClick"
                                  Visibility="{Binding IsTileLayout, Converter={StaticResource BoolToVisibilityConverter}}"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -311,6 +324,7 @@
                                  SelectedItem="{Binding SelectedPhoto}"
                                  SelectionMode="Extended"
                                  SelectionChanged="PhotoList_SelectionChanged"
+                                 MouseDoubleClick="PhotoList_MouseDoubleClick"
                                  Visibility="{Binding IsTileLayout, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
@@ -511,20 +525,34 @@
                         <TextBlock Text="People IDs (comma-separated):" />
                         <TextBox Margin="0,4,0,6"
                                  ToolTip="Example: alice,bob,team_lead"
-                                 Text="{Binding PeopleInputText, UpdateSourceTrigger=PropertyChanged}" />
+                                 Text="{Binding PeopleInputText, UpdateSourceTrigger=PropertyChanged}">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter"
+                                            Command="{Binding SaveImageCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
                         <TextBlock Text="Animal IDs (comma-separated):" />
                         <TextBox Margin="0,4,0,6"
                                  ToolTip="Example: dog_1,cat_2"
-                                 Text="{Binding AnimalInputText, UpdateSourceTrigger=PropertyChanged}" />
+                                 Text="{Binding AnimalInputText, UpdateSourceTrigger=PropertyChanged}">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter"
+                                            Command="{Binding SaveImageCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
                         <StackPanel Margin="0,0,0,10"
                                     Orientation="Horizontal">
                             <Button Margin="0,0,8,0"
                                     Padding="10,6"
                                     Command="{Binding IdentifyPeopleAnimalsCommand}"
                                     Content="Scan People / Animals" />
-                            <Button Padding="10,6"
+                            <Button Margin="0,0,8,0"
+                                    Padding="10,6"
                                     Command="{Binding SaveDetectedSubjectsCommand}"
                                     Content="Save IDs" />
+                            <Button Padding="10,6"
+                                    Command="{Binding SaveImageCommand}"
+                                    Content="Save Image" />
                         </StackPanel>
                         <TextBlock Margin="0,0,0,6"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
@@ -562,6 +590,10 @@
                         <TextBlock FontWeight="SemiBold"
                                    Text="File Actions" />
                         <WrapPanel Margin="0,4,0,10">
+                            <Button Margin="0,0,8,8"
+                                    Padding="10,6"
+                                    Command="{Binding OpenPhotoCommand}"
+                                    Content="Open Image" />
                             <Button Margin="0,0,8,8"
                                     Padding="10,6"
                                     Command="{Binding OpenFileLocationCommand}"

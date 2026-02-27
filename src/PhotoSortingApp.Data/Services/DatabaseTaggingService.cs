@@ -43,6 +43,11 @@ public class DatabaseTaggingService : ITaggingService
         asset.TagsCsv = SerializeTags(tags);
         asset.UpdatedUtc = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        WindowsFileMetadataWriter.TryWriteIdentityAndTags(
+            asset.FullPath,
+            ParseTags(asset.PeopleCsv),
+            ParseTags(asset.AnimalsCsv),
+            ParseTags(asset.TagsCsv));
         return asset;
     }
 

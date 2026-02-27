@@ -155,7 +155,9 @@ public class MainViewModel : ObservableObject
         ApplyFiltersCommand = new AsyncRelayCommand(() => LoadPhotosAsync(reset: true), () => SelectedScanRoot is not null);
         ClearFiltersCommand = new AsyncRelayCommand(ClearFiltersAsync, () => SelectedScanRoot is not null);
         LoadMoreCommand = new AsyncRelayCommand(() => LoadPhotosAsync(reset: false), () => SelectedScanRoot is not null && HasMoreResults);
+        OpenPhotoCommand = new RelayCommand(OpenPhoto, () => SelectedPhoto is not null);
         OpenFileLocationCommand = new RelayCommand(OpenFileLocation, () => SelectedPhoto is not null);
+        SaveImageCommand = new AsyncRelayCommand(SaveImageAsync, () => SelectedPhoto is not null && !_isApplyingSmartActions && !IsIndexing);
         BuildOrganizerPlanCommand = new AsyncRelayCommand(BuildOrganizerPlanAsync, () => SelectedScanRoot is not null);
         ApplyOrganizerPlanCommand = new AsyncRelayCommand(ApplyOrganizerPlanAsync, () => SelectedScanRoot is not null && _latestOrganizerPlanItems.Count > 0 && !IsIndexing);
         RefreshDuplicatesCommand = new AsyncRelayCommand(RefreshDuplicatesAsync, () => SelectedScanRoot is not null && EnableDuplicateDetection);
@@ -220,7 +222,11 @@ public class MainViewModel : ObservableObject
 
     public ICommand LoadMoreCommand { get; }
 
+    public ICommand OpenPhotoCommand { get; }
+
     public ICommand OpenFileLocationCommand { get; }
+
+    public ICommand SaveImageCommand { get; }
 
     public ICommand BuildOrganizerPlanCommand { get; }
 
@@ -1585,17 +1591,15 @@ public class MainViewModel : ObservableObject
 
                     var previousPeople = ParseCsvIds(current.PeopleCsv);
                     var previousAnimals = ParseCsvIds(current.AnimalsCsv);
-                    var mergedPeople = MergeIdentityIds(previousPeople, inputPeople);
-                    var mergedAnimals = MergeIdentityIds(previousAnimals, inputAnimals);
-                    if (IdentityListsEqual(previousPeople, mergedPeople) &&
-                        IdentityListsEqual(previousAnimals, mergedAnimals))
+                    if (IdentityListsEqual(previousPeople, inputPeople) &&
+                        IdentityListsEqual(previousAnimals, inputAnimals))
                     {
                         unchanged++;
                         continue;
                     }
 
                     var updated = await _services.PhotoEditService
-                        .UpdateDetectedSubjectsAsync(current.Id, mergedPeople, mergedAnimals)
+                        .UpdateDetectedSubjectsAsync(current.Id, inputPeople, inputAnimals)
                         .ConfigureAwait(true);
                     if (updated is null)
                     {
@@ -1637,12 +1641,80 @@ public class MainViewModel : ObservableObject
             }
             else
             {
-                StatusMessage = $"Identity IDs saved. Updated {changed}, unchanged {unchanged}, failed {failed}.";
+                StatusMessage = $"Identity IDs saved to catalog + Windows file metadata (Subject/Comments/Tags when supported). Updated {changed}, unchanged {unchanged}, failed {failed}.";
             }
         }
         catch (Exception ex)
         {
             StatusMessage = $"Saving identity IDs failed: {ex.Message}";
+        }
+        finally
+        {
+            _isApplyingSmartActions = false;
+            RaiseCommandCanExecute();
+        }
+    }
+
+    private async Task SaveImageAsync()
+    {
+        if (SelectedPhoto is null)
+        {
+            return;
+        }
+
+        _isApplyingSmartActions = true;
+        RaiseCommandCanExecute();
+
+        try
+        {
+            var selected = SelectedPhoto;
+            var people = ParseIdentityInput(PeopleInputText);
+            var animals = ParseIdentityInput(AnimalInputText);
+
+            var current = await _services.PhotoEditService
+                .GetPhotoByIdAsync(selected.Id)
+                .ConfigureAwait(true);
+            if (current is null)
+            {
+                StatusMessage = "Unable to save image changes. The photo record was not found.";
+                return;
+            }
+
+            var previousPeople = ParseCsvIds(current.PeopleCsv);
+            var previousAnimals = ParseCsvIds(current.AnimalsCsv);
+            if (IdentityListsEqual(previousPeople, people) &&
+                IdentityListsEqual(previousAnimals, animals))
+            {
+                StatusMessage = "No pending manual ID changes.";
+                return;
+            }
+
+            var updated = await _services.PhotoEditService
+                .UpdateDetectedSubjectsAsync(selected.Id, people, animals)
+                .ConfigureAwait(true);
+            if (updated is null)
+            {
+                StatusMessage = "Unable to save image changes. The photo record was not found.";
+                return;
+            }
+
+            PushUndoAction(
+                $"Save image metadata for {selected.FileName}",
+                async () =>
+                {
+                    await _services.PhotoEditService
+                        .UpdateDetectedSubjectsAsync(selected.Id, previousPeople, previousAnimals)
+                        .ConfigureAwait(true);
+                    await RefreshAfterPhotoMutationAsync(selected.Id, refreshFilters: false).ConfigureAwait(true);
+                    return "Undo complete: restored previous image metadata IDs.";
+                });
+
+            await RefreshAfterPhotoMutationAsync(selected.Id, refreshFilters: false).ConfigureAwait(true);
+            StatusMessage = "Image saved to catalog + Windows file metadata (Subject/Comments/Tags when supported).";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Save image failed: {ex.Message}";
         }
         finally
         {
@@ -2756,6 +2828,27 @@ public class MainViewModel : ObservableObject
         await LoadPhotosAsync(reset: true).ConfigureAwait(true);
     }
 
+    private void OpenPhoto()
+    {
+        if (SelectedPhoto is null)
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = SelectedPhoto.FullPath,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Unable to open image: {ex.Message}";
+        }
+    }
+
     private void OpenFileLocation()
     {
         if (SelectedPhoto is null)
@@ -2834,7 +2927,9 @@ public class MainViewModel : ObservableObject
         ((AsyncRelayCommand)ApplyFiltersCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)ClearFiltersCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)LoadMoreCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)OpenPhotoCommand).RaiseCanExecuteChanged();
         ((RelayCommand)OpenFileLocationCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)SaveImageCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)BuildOrganizerPlanCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)ApplyOrganizerPlanCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)RefreshDuplicatesCommand).RaiseCanExecuteChanged();

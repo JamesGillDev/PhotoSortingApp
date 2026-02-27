@@ -355,6 +355,11 @@ public class PhotoEditService : IPhotoEditService
         asset.UpdatedUtc = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        WindowsFileMetadataWriter.TryWriteIdentityAndTags(
+            asset.FullPath,
+            ParseCsvValues(asset.PeopleCsv),
+            ParseCsvValues(asset.AnimalsCsv),
+            ParseCsvValues(asset.TagsCsv));
         return asset;
     }
 
@@ -588,6 +593,20 @@ public class PhotoEditService : IPhotoEditService
         var compact = string.Join('_', id
             .Split(new[] { ' ', '\t', '\r', '\n', ',', ';', ':', '/', '\\' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
         return compact.Trim();
+    }
+
+    private static IReadOnlyList<string> ParseCsvValues(string? csv)
+    {
+        if (string.IsNullOrWhiteSpace(csv))
+        {
+            return Array.Empty<string>();
+        }
+
+        return csv
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static bool PathsEqual(string left, string right)

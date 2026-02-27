@@ -28,4 +28,19 @@ public partial class MainWindow : Window
             viewModel.SelectedPhoto = selected;
         }
     }
+
+    private void PhotoList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel ||
+            sender is not ListBox listBox ||
+            listBox.SelectedItem is not PhotoItemViewModel)
+        {
+            return;
+        }
+
+        if (viewModel.OpenPhotoCommand.CanExecute(null))
+        {
+            viewModel.OpenPhotoCommand.Execute(null);
+        }
+    }
 }

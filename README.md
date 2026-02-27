@@ -3,7 +3,7 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/UI-WPF-512BD4)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![EF%20Core](https://img.shields.io/badge/EF%20Core-8.0-5C2D91)](https://learn.microsoft.com/ef/core/)
-[![Version](https://img.shields.io/badge/Version-1.3.0-brightgreen)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.3.1-brightgreen)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-BLS%201.1-blue.svg)](./LICENSE.md)
 
 PhotoSortingApp is a local-first Windows desktop photo catalog and safe organizer planner.
@@ -168,7 +168,7 @@ dotnet publish src/PhotoSortingApp.App/PhotoSortingApp.App.csproj -c Release -r 
 
 ## Versioning and Public GitHub Releases
 
-- Current release version: `1.3.0`
+- Current release version: `1.3.1`
 - Release history and iteration notes: [`CHANGELOG.md`](./CHANGELOG.md)
 - Build version metadata source: `Directory.Build.props`
 
@@ -179,16 +179,17 @@ Current release iteration history:
 - `v1.1.0` (2026-02-27): Added rename assistant, persistent tag management, direct move/copy/duplicate/repair actions, and in-session undo history.
 - `v1.2.0` (2026-02-27): Added gallery multi-select, AI-assisted smart rename batching, person/animal identity scan storage+search, and tile wrapping improvements.
 - `v1.3.0` (2026-02-27): Added batch identity ID assignment, context category scanning tags (environment/event/holiday/scenery/artwork), standardized rename guidance, and duplicate-group header spacing fixes.
+- `v1.3.1` (2026-02-27): Added explicit Save Image and double-click open actions, fixed top-bar clipping, and fixed Windows file-metadata persistence for identity/tag updates.
 
 Tag and publish a new GitHub release iteration:
 
 ```powershell
-git tag v1.3.0
+git tag v1.3.1
 git push origin main
-git push origin v1.3.0
+git push origin v1.3.1
 ```
 
-Then create a GitHub Release from the `v1.3.0` tag and copy the matching section from `CHANGELOG.md` into the release notes.
+Then create a GitHub Release from the `v1.3.1` tag and copy the matching section from `CHANGELOG.md` into the release notes.
 
 ## AI Extension Points (v1 Stubs)
 
