@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
@@ -28,6 +29,7 @@ public class MainViewModel : ObservableObject
     private int _nextPage = 1;
     private int _loadedCount;
     private List<OrganizerPlanItem> _latestOrganizerPlanItems = new();
+    private readonly Dictionary<Guid, Func<Task<string>>> _undoHandlers = new();
 
     private ScanRootItemViewModel? _selectedScanRoot;
     private SmartAlbumItemViewModel? _selectedAlbum;
@@ -38,9 +40,14 @@ public class MainViewModel : ObservableObject
     private ThemeOptionViewModel? _selectedThemeOption;
     private DuplicateGroupItemViewModel? _selectedDuplicateGroup;
     private PhotoItemViewModel? _selectedPhoto;
+    private RenameSuggestionItemViewModel? _selectedRenameSuggestion;
+    private UndoActionItemViewModel? _selectedUndoAction;
     private BitmapImage? _previewImage;
     private DateTime? _fromDateLocal;
     private DateTime? _toDateLocal;
+    private string _renameInput = string.Empty;
+    private string _tagInputText = string.Empty;
+    private string? _selectedTag;
     private string _searchText = string.Empty;
     private string _statusMessage = "Select a folder to begin indexing.";
     private string _indexingStatus = string.Empty;
@@ -61,6 +68,9 @@ public class MainViewModel : ObservableObject
         DuplicateGroups = new ObservableCollection<DuplicateGroupItemViewModel>();
         Photos = new ObservableCollection<PhotoItemViewModel>();
         OrganizerPreviewItems = new ObservableCollection<OrganizerPlanItem>();
+        RenameSuggestions = new ObservableCollection<RenameSuggestionItemViewModel>();
+        PhotoTags = new ObservableCollection<string>();
+        UndoHistory = new ObservableCollection<UndoActionItemViewModel>();
 
         DateSourceOptions = new ObservableCollection<DateSourceOptionViewModel>
         {
@@ -111,6 +121,17 @@ public class MainViewModel : ObservableObject
         BuildOrganizerPlanCommand = new AsyncRelayCommand(BuildOrganizerPlanAsync, () => SelectedScanRoot is not null);
         ApplyOrganizerPlanCommand = new AsyncRelayCommand(ApplyOrganizerPlanAsync, () => SelectedScanRoot is not null && _latestOrganizerPlanItems.Count > 0 && !IsIndexing);
         RefreshDuplicatesCommand = new AsyncRelayCommand(RefreshDuplicatesAsync, () => SelectedScanRoot is not null && EnableDuplicateDetection);
+        ApplyRenameSuggestionCommand = new RelayCommand(ApplyRenameSuggestion, () => SelectedPhoto is not null && SelectedRenameSuggestion is not null);
+        RenamePhotoCommand = new AsyncRelayCommand(RenamePhotoAsync, () => SelectedPhoto is not null && !string.IsNullOrWhiteSpace(RenameInput));
+        MovePhotoCommand = new AsyncRelayCommand(MovePhotoAsync, () => SelectedPhoto is not null && !IsIndexing);
+        CopyPhotoCommand = new AsyncRelayCommand(CopyPhotoAsync, () => SelectedPhoto is not null && !IsIndexing);
+        DuplicatePhotoCommand = new AsyncRelayCommand(DuplicatePhotoAsync, () => SelectedPhoto is not null && !IsIndexing);
+        RepairPhotoLocationCommand = new AsyncRelayCommand(RepairPhotoLocationAsync, () => SelectedPhoto is not null && !IsIndexing);
+        AddTagCommand = new AsyncRelayCommand(AddTagAsync, () => SelectedPhoto is not null && !string.IsNullOrWhiteSpace(TagInputText));
+        UpdateTagCommand = new AsyncRelayCommand(UpdateTagAsync, () => SelectedPhoto is not null && !string.IsNullOrWhiteSpace(SelectedTag) && !string.IsNullOrWhiteSpace(TagInputText));
+        RemoveTagCommand = new AsyncRelayCommand(RemoveTagAsync, () => SelectedPhoto is not null && !string.IsNullOrWhiteSpace(SelectedTag));
+        UndoLastChangeCommand = new AsyncRelayCommand(UndoLastChangeAsync, () => UndoHistory.Count > 0 && !IsIndexing);
+        UndoSelectedChangeCommand = new AsyncRelayCommand(UndoSelectedChangeAsync, () => SelectedUndoAction is not null && !IsIndexing);
     }
 
     public ObservableCollection<ScanRootItemViewModel> ScanRoots { get; }
@@ -132,6 +153,12 @@ public class MainViewModel : ObservableObject
     public ObservableCollection<PhotoItemViewModel> Photos { get; }
 
     public ObservableCollection<OrganizerPlanItem> OrganizerPreviewItems { get; }
+
+    public ObservableCollection<RenameSuggestionItemViewModel> RenameSuggestions { get; }
+
+    public ObservableCollection<string> PhotoTags { get; }
+
+    public ObservableCollection<UndoActionItemViewModel> UndoHistory { get; }
 
     public ICommand SelectFolderCommand { get; }
 
@@ -156,6 +183,28 @@ public class MainViewModel : ObservableObject
     public ICommand ApplyOrganizerPlanCommand { get; }
 
     public ICommand RefreshDuplicatesCommand { get; }
+
+    public ICommand ApplyRenameSuggestionCommand { get; }
+
+    public ICommand RenamePhotoCommand { get; }
+
+    public ICommand MovePhotoCommand { get; }
+
+    public ICommand CopyPhotoCommand { get; }
+
+    public ICommand DuplicatePhotoCommand { get; }
+
+    public ICommand RepairPhotoLocationCommand { get; }
+
+    public ICommand AddTagCommand { get; }
+
+    public ICommand UpdateTagCommand { get; }
+
+    public ICommand RemoveTagCommand { get; }
+
+    public ICommand UndoLastChangeCommand { get; }
+
+    public ICommand UndoSelectedChangeCommand { get; }
 
     public ScanRootItemViewModel? SelectedScanRoot
     {
@@ -274,6 +323,35 @@ public class MainViewModel : ObservableObject
             }
 
             _ = LoadPreviewAsync(value);
+            _ = OnSelectedPhotoChangedAsync(value);
+            RaiseCommandCanExecute();
+        }
+    }
+
+    public RenameSuggestionItemViewModel? SelectedRenameSuggestion
+    {
+        get => _selectedRenameSuggestion;
+        set
+        {
+            if (!SetProperty(ref _selectedRenameSuggestion, value))
+            {
+                return;
+            }
+
+            RaiseCommandCanExecute();
+        }
+    }
+
+    public UndoActionItemViewModel? SelectedUndoAction
+    {
+        get => _selectedUndoAction;
+        set
+        {
+            if (!SetProperty(ref _selectedUndoAction, value))
+            {
+                return;
+            }
+
             RaiseCommandCanExecute();
         }
     }
@@ -294,6 +372,53 @@ public class MainViewModel : ObservableObject
     {
         get => _toDateLocal;
         set => SetProperty(ref _toDateLocal, value);
+    }
+
+    public string RenameInput
+    {
+        get => _renameInput;
+        set
+        {
+            if (!SetProperty(ref _renameInput, value))
+            {
+                return;
+            }
+
+            RaiseCommandCanExecute();
+        }
+    }
+
+    public string TagInputText
+    {
+        get => _tagInputText;
+        set
+        {
+            if (!SetProperty(ref _tagInputText, value))
+            {
+                return;
+            }
+
+            RaiseCommandCanExecute();
+        }
+    }
+
+    public string? SelectedTag
+    {
+        get => _selectedTag;
+        set
+        {
+            if (!SetProperty(ref _selectedTag, value))
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                TagInputText = value;
+            }
+
+            RaiseCommandCanExecute();
+        }
     }
 
     public string SearchText
@@ -398,6 +523,10 @@ public class MainViewModel : ObservableObject
             FolderFilters.Clear();
             DuplicateGroups.Clear();
             OrganizerPreviewItems.Clear();
+            RenameSuggestions.Clear();
+            PhotoTags.Clear();
+            SelectedTag = null;
+            RenameInput = string.Empty;
             _latestOrganizerPlanItems.Clear();
             SelectedPhoto = null;
             PreviewImage = null;
@@ -411,6 +540,10 @@ public class MainViewModel : ObservableObject
         _suppressDuplicateUpdate = true;
         EnableDuplicateDetection = SelectedScanRoot.EnableDuplicateDetection;
         _suppressDuplicateUpdate = false;
+        RenameSuggestions.Clear();
+        PhotoTags.Clear();
+        SelectedTag = null;
+        RenameInput = string.Empty;
         OrganizerPreviewItems.Clear();
         _latestOrganizerPlanItems.Clear();
         PlanSummary = "No organizer plan generated yet.";
@@ -855,6 +988,662 @@ public class MainViewModel : ObservableObject
         }
     }
 
+    private async Task OnSelectedPhotoChangedAsync(PhotoItemViewModel? selected)
+    {
+        RenameSuggestions.Clear();
+        SelectedRenameSuggestion = null;
+        PhotoTags.Clear();
+        SelectedTag = null;
+        TagInputText = string.Empty;
+
+        if (selected is null)
+        {
+            RenameInput = string.Empty;
+            return;
+        }
+
+        RenameInput = Path.GetFileNameWithoutExtension(selected.FileName);
+
+        try
+        {
+            var tags = await _services.TaggingService.GetTagsAsync(selected.Id).ConfigureAwait(true);
+            SetPhotoTags(tags);
+            PopulateRenameSuggestions(selected, tags);
+        }
+        catch (Exception ex)
+        {
+            PopulateRenameSuggestions(selected, Array.Empty<string>());
+            StatusMessage = $"Unable to load tags for selected photo: {ex.Message}";
+        }
+    }
+
+    private void PopulateRenameSuggestions(PhotoItemViewModel photo, IReadOnlyList<string> tags)
+    {
+        RenameSuggestions.Clear();
+
+        var extension = NormalizeExtension(photo.Extension);
+        var localDate = (photo.Asset.DateTaken ?? photo.Asset.FileLastWriteUtc).ToLocalTime();
+        var camera = $"{photo.Asset.CameraMake} {photo.Asset.CameraModel}".Trim();
+        var folderName = Path.GetFileName(photo.Asset.FolderPath);
+
+        AddRenameSuggestion($"IMG_{localDate:yyyyMMdd_HHmmss}{extension}");
+
+        if (!string.IsNullOrWhiteSpace(camera))
+        {
+            AddRenameSuggestion($"{SanitizeFileToken(camera)}_{localDate:yyyyMMdd_HHmmss}{extension}");
+        }
+
+        if (tags.Count > 0)
+        {
+            var tagToken = string.Join("_", tags.Take(3).Select(SanitizeFileToken));
+            AddRenameSuggestion($"{tagToken}_{localDate:yyyyMMdd}{extension}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(folderName))
+        {
+            AddRenameSuggestion($"{SanitizeFileToken(folderName)}_{localDate:yyyyMMdd_HHmm}{extension}");
+        }
+
+        AddRenameSuggestion($"{SanitizeFileToken(Path.GetFileNameWithoutExtension(photo.FileName))}{extension}");
+
+        SelectedRenameSuggestion = RenameSuggestions.FirstOrDefault();
+    }
+
+    private void AddRenameSuggestion(string fileName)
+    {
+        var normalized = NormalizeSuggestedFileName(fileName);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return;
+        }
+
+        if (RenameSuggestions.Any(x => x.FileName.Equals(normalized, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        RenameSuggestions.Add(new RenameSuggestionItemViewModel
+        {
+            FileName = normalized,
+            DisplayName = normalized
+        });
+    }
+
+    private void ApplyRenameSuggestion()
+    {
+        if (SelectedRenameSuggestion is null)
+        {
+            return;
+        }
+
+        RenameInput = Path.GetFileNameWithoutExtension(SelectedRenameSuggestion.FileName);
+    }
+
+    private async Task RenamePhotoAsync()
+    {
+        if (SelectedPhoto is null)
+        {
+            return;
+        }
+
+        var sourcePhoto = SelectedPhoto;
+        var oldPath = sourcePhoto.FullPath;
+        var oldName = sourcePhoto.FileName;
+        var requestedName = BuildRequestedFileName(RenameInput, sourcePhoto.Extension);
+        if (string.Equals(oldName, requestedName, StringComparison.OrdinalIgnoreCase))
+        {
+            StatusMessage = "Rename skipped because the file already has that name.";
+            return;
+        }
+
+        try
+        {
+            _services.ThumbnailService.Invalidate(sourcePhoto.Asset);
+            var updated = await _services.PhotoEditService
+                .RenamePhotoAsync(sourcePhoto.Id, requestedName)
+                .ConfigureAwait(true);
+            if (updated is null)
+            {
+                StatusMessage = "Unable to rename. The photo record was not found.";
+                return;
+            }
+
+            PushUndoAction(
+                $"Rename {oldName} -> {updated.FileName}",
+                async () =>
+                {
+                    var reverted = await _services.PhotoEditService
+                        .RelocatePhotoAsync(updated.Id, oldPath)
+                        .ConfigureAwait(true);
+                    await RefreshAfterPhotoMutationAsync(updated.Id, refreshFilters: false).ConfigureAwait(true);
+                    return reverted is null
+                        ? "Undo rename could not find the photo."
+                        : $"Undo complete: restored {Path.GetFileName(oldPath)}.";
+                });
+
+            await RefreshAfterPhotoMutationAsync(updated.Id, refreshFilters: false).ConfigureAwait(true);
+            StatusMessage = $"Renamed '{oldName}' to '{updated.FileName}'.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Rename failed: {ex.Message}";
+        }
+    }
+
+    private async Task MovePhotoAsync()
+    {
+        if (SelectedPhoto is null)
+        {
+            return;
+        }
+
+        var sourcePhoto = SelectedPhoto;
+        var oldPath = sourcePhoto.FullPath;
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Move selected photo to folder (inside current scan root)",
+            Multiselect = false,
+            InitialDirectory = sourcePhoto.Asset.FolderPath
+        };
+        if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FolderName))
+        {
+            return;
+        }
+
+        try
+        {
+            _services.ThumbnailService.Invalidate(sourcePhoto.Asset);
+            var updated = await _services.PhotoEditService
+                .MovePhotoAsync(sourcePhoto.Id, dialog.FolderName)
+                .ConfigureAwait(true);
+            if (updated is null)
+            {
+                StatusMessage = "Unable to move. The photo record was not found.";
+                return;
+            }
+
+            PushUndoAction(
+                $"Move {sourcePhoto.FileName} to {updated.FolderPath}",
+                async () =>
+                {
+                    var reverted = await _services.PhotoEditService
+                        .RelocatePhotoAsync(updated.Id, oldPath)
+                        .ConfigureAwait(true);
+                    await RefreshAfterPhotoMutationAsync(updated.Id, refreshFilters: true).ConfigureAwait(true);
+                    return reverted is null
+                        ? "Undo move could not find the photo."
+                        : $"Undo complete: moved back to {Path.GetDirectoryName(oldPath)}.";
+                });
+
+            await RefreshAfterPhotoMutationAsync(updated.Id, refreshFilters: true).ConfigureAwait(true);
+            StatusMessage = $"Moved '{updated.FileName}' to '{updated.FolderPath}'.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Move failed: {ex.Message}";
+        }
+    }
+
+    private async Task CopyPhotoAsync()
+    {
+        if (SelectedPhoto is null)
+        {
+            return;
+        }
+
+        var sourcePhoto = SelectedPhoto;
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Copy selected photo to folder (inside current scan root)",
+            Multiselect = false,
+            InitialDirectory = sourcePhoto.Asset.FolderPath
+        };
+        if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FolderName))
+        {
+            return;
+        }
+
+        try
+        {
+            var copied = await _services.PhotoEditService
+                .CopyPhotoAsync(sourcePhoto.Id, dialog.FolderName)
+                .ConfigureAwait(true);
+            if (copied is null)
+            {
+                StatusMessage = "Unable to copy. The photo record was not found.";
+                return;
+            }
+
+            PushUndoAction(
+                $"Copy {sourcePhoto.FileName} to {copied.FolderPath}",
+                async () =>
+                {
+                    var deleted = await _services.PhotoEditService
+                        .DeletePhotoAsync(copied.Id, deleteFile: true)
+                        .ConfigureAwait(true);
+                    await RefreshAfterPhotoMutationAsync(sourcePhoto.Id, refreshFilters: true).ConfigureAwait(true);
+                    return deleted
+                        ? $"Undo complete: removed copy '{copied.FileName}'."
+                        : "Undo copy could not find the copied photo record.";
+                });
+
+            await RefreshAfterPhotoMutationAsync(copied.Id, refreshFilters: true).ConfigureAwait(true);
+            StatusMessage = $"Copied to '{copied.FullPath}'.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Copy failed: {ex.Message}";
+        }
+    }
+
+    private async Task DuplicatePhotoAsync()
+    {
+        if (SelectedPhoto is null)
+        {
+            return;
+        }
+
+        var sourcePhoto = SelectedPhoto;
+
+        try
+        {
+            var duplicate = await _services.PhotoEditService
+                .DuplicatePhotoAsync(sourcePhoto.Id)
+                .ConfigureAwait(true);
+            if (duplicate is null)
+            {
+                StatusMessage = "Unable to duplicate. The photo record was not found.";
+                return;
+            }
+
+            PushUndoAction(
+                $"Duplicate {sourcePhoto.FileName}",
+                async () =>
+                {
+                    var deleted = await _services.PhotoEditService
+                        .DeletePhotoAsync(duplicate.Id, deleteFile: true)
+                        .ConfigureAwait(true);
+                    await RefreshAfterPhotoMutationAsync(sourcePhoto.Id, refreshFilters: true).ConfigureAwait(true);
+                    return deleted
+                        ? $"Undo complete: removed duplicate '{duplicate.FileName}'."
+                        : "Undo duplicate could not find the duplicate photo record.";
+                });
+
+            await RefreshAfterPhotoMutationAsync(duplicate.Id, refreshFilters: true).ConfigureAwait(true);
+            StatusMessage = $"Created duplicate '{duplicate.FileName}'.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Duplicate failed: {ex.Message}";
+        }
+    }
+
+    private async Task RepairPhotoLocationAsync()
+    {
+        if (SelectedPhoto is null)
+        {
+            return;
+        }
+
+        var sourcePhoto = SelectedPhoto;
+        var oldPath = sourcePhoto.FullPath;
+
+        try
+        {
+            var repaired = await _services.PhotoEditService
+                .RepairPhotoLocationAsync(sourcePhoto.Id)
+                .ConfigureAwait(true);
+            if (repaired is null)
+            {
+                StatusMessage = "No unique matching file was found to repair the location.";
+                return;
+            }
+
+            if (string.Equals(oldPath, repaired.FullPath, StringComparison.OrdinalIgnoreCase))
+            {
+                StatusMessage = "Photo location is already valid.";
+                return;
+            }
+
+            PushUndoAction(
+                $"Repair location for {sourcePhoto.FileName}",
+                async () =>
+                {
+                    var reverted = await _services.PhotoEditService
+                        .UpdatePathReferenceAsync(repaired.Id, oldPath)
+                        .ConfigureAwait(true);
+                    await RefreshAfterPhotoMutationAsync(repaired.Id, refreshFilters: false).ConfigureAwait(true);
+                    return reverted is null
+                        ? "Undo location repair could not find the photo."
+                        : "Undo complete: restored previous path reference.";
+                });
+
+            await RefreshAfterPhotoMutationAsync(repaired.Id, refreshFilters: false).ConfigureAwait(true);
+            StatusMessage = $"Repaired location to '{repaired.FullPath}'.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Location repair failed: {ex.Message}";
+        }
+    }
+
+    private async Task AddTagAsync()
+    {
+        if (SelectedPhoto is null)
+        {
+            return;
+        }
+
+        var incoming = ParseTagInput(TagInputText);
+        if (incoming.Count == 0)
+        {
+            StatusMessage = "Enter one or more tag values.";
+            return;
+        }
+
+        var previousTags = PhotoTags.ToList();
+        var merged = previousTags
+            .Concat(incoming)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (merged.Count == previousTags.Count)
+        {
+            StatusMessage = "All entered tags are already present.";
+            return;
+        }
+
+        await ApplyTagChangeAsync(merged, previousTags, "Added tags").ConfigureAwait(true);
+    }
+
+    private async Task UpdateTagAsync()
+    {
+        if (SelectedPhoto is null || string.IsNullOrWhiteSpace(SelectedTag))
+        {
+            return;
+        }
+
+        var replacement = NormalizeTag(TagInputText);
+        if (string.IsNullOrWhiteSpace(replacement))
+        {
+            StatusMessage = "Enter the replacement tag text.";
+            return;
+        }
+
+        var previousTags = PhotoTags.ToList();
+        var updated = previousTags
+            .Select(x => x.Equals(SelectedTag, StringComparison.OrdinalIgnoreCase) ? replacement : x)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        await ApplyTagChangeAsync(updated, previousTags, $"Updated tag '{SelectedTag}'").ConfigureAwait(true);
+    }
+
+    private async Task RemoveTagAsync()
+    {
+        if (SelectedPhoto is null || string.IsNullOrWhiteSpace(SelectedTag))
+        {
+            return;
+        }
+
+        var previousTags = PhotoTags.ToList();
+        var updated = previousTags
+            .Where(x => !x.Equals(SelectedTag, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (updated.Count == previousTags.Count)
+        {
+            return;
+        }
+
+        await ApplyTagChangeAsync(updated, previousTags, $"Removed tag '{SelectedTag}'").ConfigureAwait(true);
+    }
+
+    private async Task ApplyTagChangeAsync(IReadOnlyList<string> updatedTags, IReadOnlyList<string> previousTags, string description)
+    {
+        if (SelectedPhoto is null)
+        {
+            return;
+        }
+
+        var photoId = SelectedPhoto.Id;
+
+        try
+        {
+            var result = await _services.TaggingService
+                .ReplaceTagsAsync(photoId, updatedTags)
+                .ConfigureAwait(true);
+            if (result is null)
+            {
+                StatusMessage = "Unable to update tags. The photo record was not found.";
+                return;
+            }
+
+            SetPhotoTags(updatedTags);
+            TagInputText = string.Empty;
+            SelectedTag = null;
+
+            if (SelectedPhoto?.Id == result.Id)
+            {
+                PopulateRenameSuggestions(SelectedPhoto, PhotoTags.ToList());
+            }
+
+            PushUndoAction(
+                $"Tags: {description}",
+                async () =>
+                {
+                    var reverted = await _services.TaggingService
+                        .ReplaceTagsAsync(photoId, previousTags)
+                        .ConfigureAwait(true);
+                    if (SelectedPhoto?.Id == photoId)
+                    {
+                        SetPhotoTags(previousTags);
+                        PopulateRenameSuggestions(SelectedPhoto, PhotoTags.ToList());
+                    }
+
+                    return reverted is null
+                        ? "Undo tag update could not find the photo."
+                        : "Undo complete: restored previous tag set.";
+                });
+
+            StatusMessage = $"Tags updated. {PhotoTags.Count} total tag(s) on selected photo.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Tag update failed: {ex.Message}";
+        }
+    }
+
+    private async Task UndoLastChangeAsync()
+    {
+        if (UndoHistory.Count == 0)
+        {
+            return;
+        }
+
+        await ExecuteUndoAsync(UndoHistory[0]).ConfigureAwait(true);
+    }
+
+    private async Task UndoSelectedChangeAsync()
+    {
+        if (SelectedUndoAction is null)
+        {
+            return;
+        }
+
+        await ExecuteUndoAsync(SelectedUndoAction).ConfigureAwait(true);
+    }
+
+    private async Task ExecuteUndoAsync(UndoActionItemViewModel action)
+    {
+        if (!_undoHandlers.TryGetValue(action.Id, out var undo))
+        {
+            UndoHistory.Remove(action);
+            SelectedUndoAction = UndoHistory.FirstOrDefault();
+            RaiseCommandCanExecute();
+            return;
+        }
+
+        try
+        {
+            var message = await undo().ConfigureAwait(true);
+            _undoHandlers.Remove(action.Id);
+            UndoHistory.Remove(action);
+            SelectedUndoAction = UndoHistory.FirstOrDefault();
+            StatusMessage = message;
+            RaiseCommandCanExecute();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Undo failed: {ex.Message}";
+        }
+    }
+
+    private void PushUndoAction(string description, Func<Task<string>> undoHandler)
+    {
+        var item = new UndoActionItemViewModel
+        {
+            Description = description,
+            TimestampLocal = DateTime.Now
+        };
+
+        UndoHistory.Insert(0, item);
+        _undoHandlers[item.Id] = undoHandler;
+        SelectedUndoAction = item;
+        RaiseCommandCanExecute();
+    }
+
+    private async Task RefreshAfterPhotoMutationAsync(int? preferredPhotoId, bool refreshFilters)
+    {
+        if (refreshFilters && SelectedScanRoot is not null)
+        {
+            await RefreshFiltersAndAlbumsAsync().ConfigureAwait(true);
+        }
+        else
+        {
+            await RefreshDuplicatesAsync().ConfigureAwait(true);
+        }
+
+        await LoadPhotosAsync(reset: true).ConfigureAwait(true);
+
+        if (preferredPhotoId.HasValue)
+        {
+            SelectedPhoto = Photos.FirstOrDefault(x => x.Id == preferredPhotoId.Value);
+        }
+
+        if (SelectedPhoto is null)
+        {
+            SelectedPhoto = Photos.FirstOrDefault();
+        }
+    }
+
+    private void SetPhotoTags(IEnumerable<string> tags)
+    {
+        PhotoTags.Clear();
+        foreach (var tag in tags
+                     .Select(NormalizeTag)
+                     .Where(x => !string.IsNullOrWhiteSpace(x))
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+        {
+            PhotoTags.Add(tag);
+        }
+
+        RaiseCommandCanExecute();
+    }
+
+    private static IReadOnlyList<string> ParseTagInput(string rawInput)
+    {
+        if (string.IsNullOrWhiteSpace(rawInput))
+        {
+            return Array.Empty<string>();
+        }
+
+        return rawInput
+            .Split(new[] { ',', ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(NormalizeTag)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string NormalizeTag(string tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return string.Empty;
+        }
+
+        var compact = string.Join(' ', tag.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        return compact.Replace(',', ' ').Trim();
+    }
+
+    private static string BuildRequestedFileName(string requested, string fallbackExtension)
+    {
+        var requestedName = Path.GetFileName(requested.Trim());
+        var rawExt = Path.GetExtension(requestedName);
+        var baseName = Path.GetFileNameWithoutExtension(requestedName);
+        baseName = SanitizeFileToken(baseName);
+        if (string.IsNullOrWhiteSpace(baseName))
+        {
+            throw new InvalidOperationException("The requested file name is invalid.");
+        }
+
+        var extension = string.IsNullOrWhiteSpace(rawExt)
+            ? NormalizeExtension(fallbackExtension)
+            : NormalizeExtension(rawExt);
+        return $"{baseName}{extension}";
+    }
+
+    private static string NormalizeSuggestedFileName(string fileName)
+    {
+        var extension = NormalizeExtension(Path.GetExtension(fileName));
+        var baseName = SanitizeFileToken(Path.GetFileNameWithoutExtension(fileName));
+        if (string.IsNullOrWhiteSpace(baseName))
+        {
+            return string.Empty;
+        }
+
+        return $"{baseName}{extension}";
+    }
+
+    private static string NormalizeExtension(string extension)
+    {
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            return ".jpg";
+        }
+
+        return extension.StartsWith('.')
+            ? extension.ToLowerInvariant()
+            : $".{extension.ToLowerInvariant()}";
+    }
+
+    private static string SanitizeFileToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return string.Empty;
+        }
+
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sb = new StringBuilder(token.Length);
+        foreach (var ch in token.Trim())
+        {
+            sb.Append(invalidChars.Contains(ch) ? '_' : ch);
+        }
+
+        var compact = string.Join('_', sb.ToString()
+            .Split(new[] { ' ', '\t', '-', '_' }, StringSplitOptions.RemoveEmptyEntries));
+        if (compact.Length > 80)
+        {
+            compact = compact[..80];
+        }
+
+        return compact.Trim('_');
+    }
+
     private async Task BuildOrganizerPlanAsync()
     {
         if (SelectedScanRoot is null)
@@ -1020,5 +1809,16 @@ public class MainViewModel : ObservableObject
         ((AsyncRelayCommand)BuildOrganizerPlanCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)ApplyOrganizerPlanCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)RefreshDuplicatesCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)ApplyRenameSuggestionCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)RenamePhotoCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)MovePhotoCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)CopyPhotoCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)DuplicatePhotoCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)RepairPhotoLocationCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)AddTagCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)UpdateTagCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)RemoveTagCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)UndoLastChangeCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)UndoSelectedChangeCommand).RaiseCanExecuteChanged();
     }
 }

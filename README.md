@@ -3,7 +3,7 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/UI-WPF-512BD4)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![EF%20Core](https://img.shields.io/badge/EF%20Core-8.0-5C2D91)](https://learn.microsoft.com/ef/core/)
-[![Version](https://img.shields.io/badge/Version-1.0.1-brightgreen)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.1.0-brightgreen)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-BLS%201.1-blue.svg)](./LICENSE.md)
 
 PhotoSortingApp is a local-first Windows desktop photo catalog and safe organizer planner.
@@ -17,7 +17,7 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
 - Organizer apply requires explicit confirmation and logs every move
 - Incremental performance for large folders
 
-## v1 Features
+## Features
 
 - Root folder selection + rescanning
 - Recursive indexing for `.jpg`, `.jpeg`, `.png`, `.heic`
@@ -46,7 +46,7 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
   - date range
   - date source
   - folder subpath
-  - filename / notes search
+  - filename / notes / tags search
 - Smart Albums:
   - All Photos
   - By Month
@@ -55,6 +55,21 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
   - Recently Added
   - Possible Duplicates
 - Duplicate detection toggle (SHA-256 only when enabled)
+- Rename assistant for selected photos:
+  - metadata-informed name suggestions (date/camera/folder/tags)
+  - manual rename input with one-click apply
+- Tag management on selected photos:
+  - add tags
+  - edit existing tags
+  - remove tags
+- Streamlined selected-photo file actions:
+  - move
+  - copy
+  - duplicate
+  - location repair for missing files (searches scan root)
+- Infinite in-session undo history:
+  - undo last change
+  - undo any selected change from history dropdown
 - Dry-run organizer plan:
   - Year/Month folder strategy
   - preview + operation logging
@@ -126,7 +141,7 @@ dotnet publish src/PhotoSortingApp.App/PhotoSortingApp.App.csproj -c Release -r 
 
 ## Versioning and Public GitHub Releases
 
-- Current release version: `1.0.1`
+- Current release version: `1.1.0`
 - Release history and iteration notes: [`CHANGELOG.md`](./CHANGELOG.md)
 - Build version metadata source: `Directory.Build.props`
 
@@ -134,35 +149,35 @@ Current release iteration history:
 
 - `v1.0.0` (2026-02-25): Initial public release.
 - `v1.0.1` (2026-02-26): Added centralized version metadata and public release iteration tracking.
+- `v1.1.0` (2026-02-27): Added rename assistant, persistent tag management, direct move/copy/duplicate/repair actions, and in-session undo history.
 
 Tag and publish a new GitHub release iteration:
 
 ```powershell
-git tag v1.0.1
+git tag v1.1.0
 git push origin main
-git push origin v1.0.1
+git push origin v1.1.0
 ```
 
-Then create a GitHub Release from the `v1.0.1` tag and copy the matching section from `CHANGELOG.md` into the release notes.
+Then create a GitHub Release from the `v1.1.0` tag and copy the matching section from `CHANGELOG.md` into the release notes.
 
 ## AI Extension Points (v1 Stubs)
 
-- `ITaggingService`
 - `ISemanticSearchService`
 - `IFaceClusterService`
 
-These are implemented as empty services in v1 so AI can be added later without architecture rewrites.
+`ISemanticSearchService` and `IFaceClusterService` are currently implemented as empty services so AI can be added later without architecture rewrites.
 
 ## Known Limitations
 
 - HEIC decoding/metadata depends on local Windows codec support.
 - Thumbnail generation uses `System.Drawing.Common` and is Windows-targeted.
-- Organizer apply has no built-in undo yet (moves are logged to organizer logs).
+- Undo history is session-based and not persisted after app restart.
 - Notes editing UI is not yet implemented.
 
 ## Roadmap
 
-- v2: Safe plan apply (move/rename with collision handling + logging)
+- v2: Persisted multi-session undo/redo journal for file operations
 - v3: Local semantic search + tagging adapters
 - v4: Face clustering + guided “photo detective” workflow
 

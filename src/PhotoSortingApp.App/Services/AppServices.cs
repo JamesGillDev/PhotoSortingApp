@@ -21,8 +21,9 @@ public class AppServices
         PhotoQueryService = new PhotoQueryService(_contextFactory);
         DuplicateService = new DuplicateService(_contextFactory);
         OrganizerPlanService = new OrganizerPlanService(_contextFactory, baseDirectory);
+        PhotoEditService = new PhotoEditService(_contextFactory);
 
-        TaggingService = new EmptyTaggingService();
+        TaggingService = new DatabaseTaggingService(_contextFactory);
         SemanticSearchService = new EmptySemanticSearchService();
         FaceClusterService = new EmptyFaceClusterService();
     }
@@ -38,6 +39,8 @@ public class AppServices
     public IDuplicateService DuplicateService { get; }
 
     public IOrganizerPlanService OrganizerPlanService { get; }
+
+    public IPhotoEditService PhotoEditService { get; }
 
     public ITaggingService TaggingService { get; }
 

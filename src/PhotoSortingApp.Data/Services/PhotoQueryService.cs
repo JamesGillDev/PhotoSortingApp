@@ -33,7 +33,8 @@ public class PhotoQueryService : IPhotoQueryService
             var search = filter.SearchText.Trim();
             query = query.Where(x =>
                 x.FileName.Contains(search) ||
-                (x.Notes != null && x.Notes.Contains(search)));
+                (x.Notes != null && x.Notes.Contains(search)) ||
+                (x.TagsCsv != null && x.TagsCsv.Contains(search)));
         }
 
         if (filter.FromDateUtc.HasValue)

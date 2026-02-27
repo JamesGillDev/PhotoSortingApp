@@ -419,10 +419,90 @@
                                        Text="{Binding SelectedPhoto.Asset.Notes}" />
                         </Grid>
 
-                        <Button Margin="0,0,0,12"
-                                Padding="10,6"
-                                Command="{Binding OpenFileLocationCommand}"
-                                Content="Open File Location" />
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="Rename Assistant" />
+                        <ComboBox Margin="0,4,0,6"
+                                  DisplayMemberPath="DisplayName"
+                                  ItemsSource="{Binding RenameSuggestions}"
+                                  SelectedItem="{Binding SelectedRenameSuggestion}" />
+                        <TextBox Margin="0,0,0,6"
+                                 Text="{Binding RenameInput, UpdateSourceTrigger=PropertyChanged}" />
+                        <StackPanel Margin="0,0,0,10"
+                                    Orientation="Horizontal">
+                            <Button Margin="0,0,8,0"
+                                    Padding="10,6"
+                                    Command="{Binding ApplyRenameSuggestionCommand}"
+                                    Content="Use Suggestion" />
+                            <Button Padding="10,6"
+                                    Command="{Binding RenamePhotoCommand}"
+                                    Content="Rename" />
+                        </StackPanel>
+
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="Tags" />
+                        <ListBox Height="95"
+                                 Margin="0,4,0,6"
+                                 ItemsSource="{Binding PhotoTags}"
+                                 SelectedItem="{Binding SelectedTag}" />
+                        <TextBox Margin="0,0,0,6"
+                                 ToolTip="Use commas to add multiple tags at once."
+                                 Text="{Binding TagInputText, UpdateSourceTrigger=PropertyChanged}" />
+                        <StackPanel Margin="0,0,0,10"
+                                    Orientation="Horizontal">
+                            <Button Margin="0,0,8,0"
+                                    Padding="10,6"
+                                    Command="{Binding AddTagCommand}"
+                                    Content="Add Tag" />
+                            <Button Margin="0,0,8,0"
+                                    Padding="10,6"
+                                    Command="{Binding UpdateTagCommand}"
+                                    Content="Edit Tag" />
+                            <Button Padding="10,6"
+                                    Command="{Binding RemoveTagCommand}"
+                                    Content="Remove Tag" />
+                        </StackPanel>
+
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="File Actions" />
+                        <WrapPanel Margin="0,4,0,10">
+                            <Button Margin="0,0,8,8"
+                                    Padding="10,6"
+                                    Command="{Binding OpenFileLocationCommand}"
+                                    Content="Open File Location" />
+                            <Button Margin="0,0,8,8"
+                                    Padding="10,6"
+                                    Command="{Binding MovePhotoCommand}"
+                                    Content="Move" />
+                            <Button Margin="0,0,8,8"
+                                    Padding="10,6"
+                                    Command="{Binding CopyPhotoCommand}"
+                                    Content="Copy" />
+                            <Button Margin="0,0,8,8"
+                                    Padding="10,6"
+                                    Command="{Binding DuplicatePhotoCommand}"
+                                    Content="Duplicate" />
+                            <Button Margin="0,0,8,8"
+                                    Padding="10,6"
+                                    Command="{Binding RepairPhotoLocationCommand}"
+                                    Content="Fix Location" />
+                        </WrapPanel>
+
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="Undo History" />
+                        <ComboBox Margin="0,4,0,6"
+                                  DisplayMemberPath="DisplayName"
+                                  ItemsSource="{Binding UndoHistory}"
+                                  SelectedItem="{Binding SelectedUndoAction}" />
+                        <StackPanel Margin="0,0,0,10"
+                                    Orientation="Horizontal">
+                            <Button Margin="0,0,8,0"
+                                    Padding="10,6"
+                                    Command="{Binding UndoLastChangeCommand}"
+                                    Content="Undo Last" />
+                            <Button Padding="10,6"
+                                    Command="{Binding UndoSelectedChangeCommand}"
+                                    Content="Undo Selected" />
+                        </StackPanel>
 
                         <Separator Margin="0,0,0,10" />
                         <TextBlock FontWeight="SemiBold"

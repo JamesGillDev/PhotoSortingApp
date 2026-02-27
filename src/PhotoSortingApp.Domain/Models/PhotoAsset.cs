@@ -43,5 +43,7 @@ public class PhotoAsset
 
     public string? Notes { get; set; }
 
+    public string? TagsCsv { get; set; }
+
     public ScanRoot? ScanRoot { get; set; }
 }
