@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.4.0] - 2026-02-27
+
+### Added
+- Startup quick-start popup window with concise usage guidance shown at launch.
+- App icon asset and packaging updates so a custom icon appears in the executable and app window.
+- Auto-apply of context detection labels during `Scan People / Animals` so portrait/environment/event tags become searchable without extra manual tagging.
+- Explicit success confirmation dialogs for `Save IDs` and `Save Image`.
+
+### Changed
+- Search/filter matching now uses case-insensitive tokenized matching for filename, notes, tags, person IDs, and animal IDs (for example `cece` matches `CeCe`).
+- Heuristic identity fallback improved for portrait-style photos when AI vision is unavailable, reducing empty detection results on local-only setups.
+
+### Fixed
+- Fixed published EXE startup failure caused by invalid runtime window-icon URI (`TypeConverterMarkupExtension` startup exception).
+- Identity/context scan status reporting now includes context-tag application counts.
+
 ## [1.3.1] - 2026-02-27
 
 ### Added

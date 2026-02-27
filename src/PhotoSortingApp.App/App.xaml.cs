@@ -34,6 +34,7 @@ public partial class App : System.Windows.Application
             };
             MainWindow = mainWindow;
             mainWindow.Show();
+            ShowStartupGuide(mainWindow);
         }
         catch (Exception ex)
         {
@@ -161,6 +162,22 @@ public partial class App : System.Windows.Application
         }
 
         Dispatcher.Invoke(() => ApplyTheme(AppThemePreference.System));
+    }
+
+    private static void ShowStartupGuide(Window owner)
+    {
+        try
+        {
+            var guide = new StartupGuideWindow
+            {
+                Owner = owner
+            };
+            guide.ShowDialog();
+        }
+        catch
+        {
+            // Non-critical UI helper; ignore if guide fails so main app remains usable.
+        }
     }
 
     private static bool IsSystemInDarkMode()

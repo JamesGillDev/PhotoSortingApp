@@ -1,0 +1,65 @@
+<Window x:Class="PhotoSortingApp.App.StartupGuideWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Quick Start Guide"
+        Icon="/PhotoSortingApp.App;component/Assets/PhotoSortingApp.ico"
+        SizeToContent="WidthAndHeight"
+        MinWidth="620"
+        MaxWidth="760"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <Border Margin="12"
+            Padding="14"
+            Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource SurfaceBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="6">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0">
+                <TextBlock FontSize="18"
+                           FontWeight="Bold"
+                           Text="PhotoSortingApp Quick Start" />
+                <TextBlock Margin="0,6,0,10"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Text="Use these steps to quickly index, tag, and find photos across large folders."
+                           TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel Grid.Row="1">
+                <TextBlock Margin="0,0,0,6"
+                           Text="1. Click Select Folder, choose a root, then click Start Scan." />
+                <TextBlock Margin="0,0,0,6"
+                           Text="2. Use Search / Person ID / Animal ID filters. Search is case-insensitive." />
+                <TextBlock Margin="0,0,0,6"
+                           Text="3. Select one or more photos, run Scan People / Animals, then click Save IDs or Save Image." />
+                <TextBlock Margin="0,0,0,6"
+                           Text="4. Run Scan Environment / Event / Scene Tags to auto-assign searchable tags (example: portrait, scenery, holiday)." />
+                <TextBlock Margin="0,0,0,6"
+                           Text="5. Double-click a photo to open full size. Use Open File Location for the original file." />
+                <TextBlock Margin="0,0,0,6"
+                           Text="6. Use Smart Albums, Date Range, Folder Filter, and Duplicate Groups to narrow results fast." />
+                <TextBlock Margin="0,6,0,0"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Text="Tip: For best reliability, keep manual IDs consistent (example: CeCe) and save after edits."
+                           TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel Grid.Row="2"
+                        Margin="0,12,0,0"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <Button Width="120"
+                        IsDefault="True"
+                        Click="OnGotItClick"
+                        Content="Got It" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
