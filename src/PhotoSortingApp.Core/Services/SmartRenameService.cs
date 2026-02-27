@@ -262,12 +262,60 @@ public class SmartRenameService : ISmartRenameService
             .Take(4)
             .ToList();
         analysis.SubjectTags = subjects;
-        analysis.DetectedPeople = DetectPeopleIds(existingTags, tokens);
-        analysis.DetectedAnimals = DetectAnimalIds(existingTags, subjects, tokens);
+        var detectedPeople = DetectPeopleIds(existingTags, tokens);
+        var detectedAnimals = DetectAnimalIds(existingTags, subjects, tokens);
+        if (detectedPeople.Count == 0)
+        {
+            detectedPeople = InferGenericPeopleFromContext(
+                analysis.PeopleHint,
+                analysis.ShotType,
+                detectedAnimals,
+                subjects,
+                tokens);
+        }
+
+        analysis.DetectedPeople = detectedPeople;
+        analysis.DetectedAnimals = detectedAnimals;
 
         analysis.SuggestedBaseName = BuildBaseNameFromAnalysis(analysis, photo);
         analysis.Summary = "Heuristic analysis";
         return analysis;
+    }
+
+    private static IReadOnlyList<string> InferGenericPeopleFromContext(
+        string? peopleHint,
+        string? shotType,
+        IReadOnlyList<string> detectedAnimals,
+        IReadOnlyList<string> subjectTags,
+        IReadOnlyList<string> tokens)
+    {
+        if (detectedAnimals.Count > 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var hasAnimalSignals =
+            subjectTags.Any(tag => AnimalHints.ContainsKey(tag)) ||
+            tokens.Any(token => AnimalHints.ContainsKey(token));
+        if (hasAnimalSignals)
+        {
+            return Array.Empty<string>();
+        }
+
+        var portraitLike =
+            shotType?.Equals("portrait", StringComparison.OrdinalIgnoreCase) == true ||
+            peopleHint?.Equals("portrait", StringComparison.OrdinalIgnoreCase) == true ||
+            peopleHint?.Equals("selfie", StringComparison.OrdinalIgnoreCase) == true;
+        if (!portraitLike)
+        {
+            return Array.Empty<string>();
+        }
+
+        var isGroupLike = tokens.Any(token =>
+            token is "group" or "team" or "friends" or "family" or "wedding" or "party");
+        return isGroupLike
+            ? new[] { "person_group" }
+            : new[] { "person" };
     }
 
     private static SmartRenameAnalysis MergeAnalyses(SmartRenameAnalysis fallback, SmartRenameAnalysis ai)
