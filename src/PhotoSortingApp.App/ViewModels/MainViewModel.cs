@@ -610,10 +610,19 @@ public class MainViewModel : ObservableObject
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
             .ToList();
+        var reparseLibraryRoots = GetReparseBackedLibraryRoots()
+            .Where(path => !fixedDrives.Contains(path, StringComparer.OrdinalIgnoreCase))
+            .ToList();
 
-        if (fixedDrives.Count == 0)
+        var scanTargets = new List<(string RootPath, string Label)>
         {
-            StatusMessage = "No fixed drives are available for whole-computer scan.";
+        };
+        scanTargets.AddRange(fixedDrives.Select(path => (path, "Drive")));
+        scanTargets.AddRange(reparseLibraryRoots.Select(path => (path, "Library")));
+
+        if (scanTargets.Count == 0)
+        {
+            StatusMessage = "No eligible scan targets were found for whole-computer scan.";
             return;
         }
 
@@ -623,25 +632,29 @@ public class MainViewModel : ObservableObject
         IsIndexing = true;
         IndexingPercent = 0;
         IndexingStatus = "Preparing whole-computer scan (safe mode)...";
-        StatusMessage = "Whole-computer scan started. System and program folders are excluded.";
+        StatusMessage = reparseLibraryRoots.Count == 0
+            ? "Whole-computer scan started. System and program folders are excluded."
+            : "Whole-computer scan started. Including reparse-backed user libraries (for example, OneDrive Pictures).";
 
         try
         {
-            var scanRoots = new List<ScanRoot>();
-            foreach (var driveRoot in fixedDrives)
+            var scanRoots = new List<(ScanRoot Root, string Label)>();
+            var scanOutcomes = new List<(int ScanRootId, int FilesFound)>();
+            foreach (var target in scanTargets)
             {
                 _scanCts.Token.ThrowIfCancellationRequested();
                 var scanRoot = await _services.ScanService
-                    .GetOrCreateScanRootAsync(driveRoot, EnableDuplicateDetection, _scanCts.Token)
+                    .GetOrCreateScanRootAsync(target.RootPath, EnableDuplicateDetection, _scanCts.Token)
                     .ConfigureAwait(true);
-                scanRoots.Add(scanRoot);
+                scanRoots.Add((scanRoot, target.Label));
             }
 
             var aggregate = new ScanResult();
             for (var index = 0; index < scanRoots.Count; index++)
             {
                 _scanCts.Token.ThrowIfCancellationRequested();
-                var root = scanRoots[index];
+                var root = scanRoots[index].Root;
+                var label = scanRoots[index].Label;
                 var currentIndex = index;
                 var progress = new Progress<ScanProgressInfo>(info =>
                 {
@@ -651,7 +664,7 @@ public class MainViewModel : ObservableObject
                         : 0d;
                     IndexingPercent = Math.Min(100d, ((currentIndex + (drivePercent / 100d)) / scanRoots.Count) * 100d);
                     IndexingStatus =
-                        $"Drive {root.RootPath} ({currentIndex + 1}/{scanRoots.Count})  Found: {info.FilesFound}  Indexed: {info.FilesIndexed}  Updated: {info.FilesUpdated}  Skipped: {info.FilesSkipped}  Elapsed: {info.Elapsed:hh\\:mm\\:ss}";
+                        $"{label} {root.RootPath} ({currentIndex + 1}/{scanRoots.Count})  Found: {info.FilesFound}  Indexed: {info.FilesIndexed}  Updated: {info.FilesUpdated}  Skipped: {info.FilesSkipped}  Elapsed: {info.Elapsed:hh\\:mm\\:ss}";
                 });
 
                 var result = await _services.ScanService
@@ -664,13 +677,21 @@ public class MainViewModel : ObservableObject
                 aggregate.FilesSkipped += result.FilesSkipped;
                 aggregate.FilesRemoved += result.FilesRemoved;
                 aggregate.Duration += result.Duration;
+                scanOutcomes.Add((root.Id, result.FilesFound));
                 IndexingPercent = Math.Min(100d, ((currentIndex + 1d) / scanRoots.Count) * 100d);
             }
 
             await RefreshScanRootsAsync().ConfigureAwait(true);
             if (scanRoots.Count > 0)
             {
-                SelectedScanRoot = ScanRoots.FirstOrDefault(x => x.Id == scanRoots[0].Id) ?? SelectedScanRoot;
+                var preferredRootId = scanOutcomes
+                    .OrderByDescending(x => x.FilesFound)
+                    .ThenBy(x => x.ScanRootId)
+                    .Select(x => x.ScanRootId)
+                    .FirstOrDefault();
+                SelectedScanRoot = ScanRoots.FirstOrDefault(x => x.Id == preferredRootId)
+                    ?? ScanRoots.FirstOrDefault(x => x.Id == scanRoots[0].Root.Id)
+                    ?? SelectedScanRoot;
             }
 
             if (SelectedScanRoot is not null)
@@ -680,7 +701,7 @@ public class MainViewModel : ObservableObject
             }
 
             StatusMessage =
-                $"Whole-computer scan complete across {scanRoots.Count} drive(s). Found {aggregate.FilesFound}, indexed {aggregate.FilesIndexed}, updated {aggregate.FilesUpdated}, removed {aggregate.FilesRemoved}. Safe exclusions reduced app/program image noise.";
+                $"Whole-computer scan complete across {scanRoots.Count} target(s). Found {aggregate.FilesFound}, indexed {aggregate.FilesIndexed}, updated {aggregate.FilesUpdated}, removed {aggregate.FilesRemoved}. Safe exclusions reduced app/program image noise.";
         }
         catch (OperationCanceledException)
         {
@@ -695,6 +716,39 @@ public class MainViewModel : ObservableObject
             IsIndexing = false;
             _scanCts?.Dispose();
             _scanCts = null;
+        }
+    }
+
+    private static IReadOnlyList<string> GetReparseBackedLibraryRoots()
+    {
+        var candidates = new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+        };
+
+        return candidates
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(Path.GetFullPath)
+            .Where(Directory.Exists)
+            .Where(IsReparsePointDirectory)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static bool IsReparsePointDirectory(string path)
+    {
+        try
+        {
+            var attributes = File.GetAttributes(path);
+            return (attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint;
+        }
+        catch
+        {
+            return false;
         }
     }
 

@@ -317,7 +317,8 @@ public class ScanService : IScanService
         {
             var attributes = File.GetAttributes(directoryPath);
             if (options.SkipReparsePoints &&
-                (attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
+                (attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint &&
+                !PathsEqual(directoryPath, rootPath))
             {
                 return true;
             }
@@ -385,5 +386,13 @@ public class ScanService : IScanService
             CurrentFile = currentFile,
             Elapsed = elapsed
         });
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        return string.Equals(
+            Path.GetFullPath(left),
+            Path.GetFullPath(right),
+            StringComparison.OrdinalIgnoreCase);
     }
 }

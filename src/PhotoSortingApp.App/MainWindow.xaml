@@ -233,48 +233,49 @@
                     </DockPanel>
 
                     <Grid Grid.Row="1">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                      Visibility="{Binding IsTileLayout, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <ListBox BorderThickness="0"
-                                     Background="Transparent"
-                                     ItemsSource="{Binding Photos}"
-                                     SelectedItem="{Binding SelectedPhoto}">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel />
-                                    </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Width="170"
-                                                Height="190"
-                                                Margin="6"
-                                                Padding="6"
-                                                Background="{DynamicResource TileBackgroundBrush}"
-                                                BorderBrush="{DynamicResource TileBorderBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="6">
-                                            <StackPanel>
-                                                <Border Height="120"
-                                                        Background="{DynamicResource SurfaceMutedBrush}"
-                                                        CornerRadius="4">
-                                                    <Image Source="{Binding ThumbnailImage}"
-                                                           Stretch="UniformToFill" />
-                                                </Border>
-                                                <TextBlock Margin="0,6,0,0"
-                                                           FontWeight="SemiBold"
-                                                           Text="{Binding FileName}"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock FontSize="11"
-                                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                                           Text="{Binding DateTakenText}"
-                                                           TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </ScrollViewer>
+                        <ListBox BorderThickness="0"
+                                 Background="Transparent"
+                                 ItemsSource="{Binding Photos}"
+                                 SelectedItem="{Binding SelectedPhoto}"
+                                 Visibility="{Binding IsTileLayout, Converter={StaticResource BoolToVisibilityConverter}}"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.CanContentScroll="False">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="170"
+                                            Height="190"
+                                            Margin="6"
+                                            Padding="6"
+                                            Background="{DynamicResource TileBackgroundBrush}"
+                                            BorderBrush="{DynamicResource TileBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6">
+                                        <StackPanel>
+                                            <Border Height="120"
+                                                    Background="{DynamicResource SurfaceMutedBrush}"
+                                                    CornerRadius="4">
+                                                <Image Source="{Binding ThumbnailImage}"
+                                                       Stretch="UniformToFill" />
+                                            </Border>
+                                            <TextBlock Margin="0,6,0,0"
+                                                       FontWeight="SemiBold"
+                                                       Text="{Binding FileName}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock FontSize="11"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       Text="{Binding DateTakenText}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
 
                         <ListBox BorderThickness="0"
                                  Background="Transparent"
