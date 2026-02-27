@@ -10,6 +10,8 @@ public class PhotoQueryService : IPhotoQueryService
     private const string YearPrefix = "year:";
     private const string MonthPrefix = "month:";
     private const string DuplicatePrefix = "dup:";
+    private const string NoCaseCollation = "NOCASE";
+    private const string LikeEscape = "\\";
 
     private readonly Func<PhotoCatalogDbContext> _contextFactory;
 
@@ -30,23 +32,41 @@ public class PhotoQueryService : IPhotoQueryService
 
         if (!string.IsNullOrWhiteSpace(filter.SearchText))
         {
-            var search = filter.SearchText.Trim();
-            query = query.Where(x =>
-                x.FileName.Contains(search) ||
-                (x.Notes != null && x.Notes.Contains(search)) ||
-                (x.TagsCsv != null && x.TagsCsv.Contains(search)));
+            var searchTokens = ParseSearchTokens(filter.SearchText);
+            foreach (var token in searchTokens)
+            {
+                var pattern = BuildContainsLikePattern(token);
+                query = query.Where(x =>
+                    EF.Functions.Like(EF.Functions.Collate(x.FileName, NoCaseCollation), pattern, LikeEscape) ||
+                    (x.Notes != null && EF.Functions.Like(EF.Functions.Collate(x.Notes, NoCaseCollation), pattern, LikeEscape)) ||
+                    (x.TagsCsv != null && EF.Functions.Like(EF.Functions.Collate(x.TagsCsv, NoCaseCollation), pattern, LikeEscape)) ||
+                    (x.PeopleCsv != null && EF.Functions.Like(EF.Functions.Collate(x.PeopleCsv, NoCaseCollation), pattern, LikeEscape)) ||
+                    (x.AnimalsCsv != null && EF.Functions.Like(EF.Functions.Collate(x.AnimalsCsv, NoCaseCollation), pattern, LikeEscape)));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(filter.PersonSearchText))
         {
-            var personSearch = filter.PersonSearchText.Trim();
-            query = query.Where(x => x.PeopleCsv != null && x.PeopleCsv.Contains(personSearch));
+            var personTokens = ParseSearchTokens(filter.PersonSearchText);
+            foreach (var token in personTokens)
+            {
+                var pattern = BuildContainsLikePattern(token);
+                query = query.Where(x =>
+                    x.PeopleCsv != null &&
+                    EF.Functions.Like(EF.Functions.Collate(x.PeopleCsv, NoCaseCollation), pattern, LikeEscape));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(filter.AnimalSearchText))
         {
-            var animalSearch = filter.AnimalSearchText.Trim();
-            query = query.Where(x => x.AnimalsCsv != null && x.AnimalsCsv.Contains(animalSearch));
+            var animalTokens = ParseSearchTokens(filter.AnimalSearchText);
+            foreach (var token in animalTokens)
+            {
+                var pattern = BuildContainsLikePattern(token);
+                query = query.Where(x =>
+                    x.AnimalsCsv != null &&
+                    EF.Functions.Like(EF.Functions.Collate(x.AnimalsCsv, NoCaseCollation), pattern, LikeEscape));
+            }
         }
 
         if (filter.FromDateUtc.HasValue)
@@ -205,6 +225,40 @@ public class PhotoQueryService : IPhotoQueryService
             .ToList();
 
         return relative;
+    }
+
+    private static IReadOnlyList<string> ParseSearchTokens(string rawInput)
+    {
+        if (string.IsNullOrWhiteSpace(rawInput))
+        {
+            return Array.Empty<string>();
+        }
+
+        var tokens = rawInput
+            .Trim()
+            .Split(
+                new[] { ' ', '\t', '\r', '\n', ',', ';', '|', '/', '\\', '-', '_', '.' },
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToList();
+
+        if (tokens.Count == 0)
+        {
+            tokens.Add(rawInput.Trim());
+        }
+
+        return tokens;
+    }
+
+    private static string BuildContainsLikePattern(string token)
+    {
+        var escaped = token
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
+        return $"%{escaped}%";
     }
 
     private static IQueryable<PhotoAsset> ApplyAlbumFilter(
