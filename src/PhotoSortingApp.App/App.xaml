@@ -49,6 +49,10 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         </Style>
 
+        <Style TargetType="{x:Type Control}">
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+        </Style>
+
         <Style TargetType="{x:Type Button}">
             <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
@@ -165,6 +169,18 @@
             <Setter Property="RowBackground" Value="{DynamicResource ControlBackgroundBrush}" />
             <Setter Property="AlternatingRowBackground" Value="{DynamicResource SurfaceMutedBrush}" />
             <Setter Property="GridLinesVisibility" Value="Horizontal" />
+        </Style>
+
+        <Style TargetType="{x:Type DataGridCell}">
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ControlSelectionBackgroundBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource ControlSelectionForegroundBrush}" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="{x:Type DataGridColumnHeader}">

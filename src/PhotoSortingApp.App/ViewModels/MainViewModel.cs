@@ -4,12 +4,12 @@ using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using Microsoft.Win32;
 using PhotoSortingApp.App.Services;
 using PhotoSortingApp.App.Theming;
 using PhotoSortingApp.App.Utils;
 using PhotoSortingApp.Domain.Enums;
 using PhotoSortingApp.Domain.Models;
-using WinForms = System.Windows.Forms;
 
 namespace PhotoSortingApp.App.ViewModels;
 
@@ -449,20 +449,20 @@ public class MainViewModel : ObservableObject
 
     private async Task SelectFolderAsync()
     {
-        using var dialog = new WinForms.FolderBrowserDialog
+        var dialog = new OpenFolderDialog
         {
-            Description = "Select a root folder that contains photos",
-            UseDescriptionForTitle = true,
-            ShowNewFolderButton = false
+            Title = "Select a root folder that contains photos",
+            Multiselect = false,
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
         };
 
-        if (dialog.ShowDialog() != WinForms.DialogResult.OK)
+        if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FolderName))
         {
             return;
         }
 
         var selected = await _services.ScanService
-            .GetOrCreateScanRootAsync(dialog.SelectedPath, EnableDuplicateDetection)
+            .GetOrCreateScanRootAsync(dialog.FolderName, EnableDuplicateDetection)
             .ConfigureAwait(true);
         await RefreshScanRootsAsync().ConfigureAwait(true);
         SelectedScanRoot = ScanRoots.FirstOrDefault(x => x.Id == selected.Id);

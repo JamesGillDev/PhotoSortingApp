@@ -87,6 +87,16 @@ This launches the Windows desktop app window (WPF).
 
 If you run `dotnet run` from `PhotoSorting_EditorApp/PhotoSorting_EditorApp`, you'll start the sample web host and see `Hello World` instead.
 
+Troubleshooting:
+
+- If you see a popup saying the app "requires the Windows App Runtime Version 1.5", that is from a stale/other WinAppSDK process. This WPF project does not require Windows App SDK to run.
+- From repo root, close any running `PhotoSortingApp.App.exe` instances, then run:
+
+```powershell
+dotnet clean .\src\PhotoSortingApp.App\PhotoSortingApp.App.csproj
+dotnet run --project .\src\PhotoSortingApp.App\PhotoSortingApp.App.csproj
+```
+
 ## Database and Migrations
 
 Install local EF CLI tool once:

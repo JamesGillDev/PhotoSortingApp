@@ -77,7 +77,7 @@ public partial class App : System.Windows.Application
             SetBrushColor("ControlBackgroundBrush", MediaColor.FromRgb(0x23, 0x2F, 0x3F));
             SetBrushColor("ControlBorderBrush", MediaColor.FromRgb(0x45, 0x57, 0x70));
             SetBrushColor("ControlForegroundBrush", MediaColor.FromRgb(0xEE, 0xF2, 0xF8));
-            SetBrushColor("DisabledForegroundBrush", MediaColor.FromRgb(0x8D, 0x9A, 0xAD));
+            SetBrushColor("DisabledForegroundBrush", MediaColor.FromRgb(0xA3, 0xB1, 0xC4));
             SetBrushColor("SelectionBrush", MediaColor.FromRgb(0x4C, 0x74, 0xA8));
             SetBrushColor("ControlPopupBackgroundBrush", MediaColor.FromRgb(0x23, 0x2F, 0x3F));
             SetBrushColor("ControlPopupBorderBrush", MediaColor.FromRgb(0x45, 0x57, 0x70));
@@ -86,16 +86,22 @@ public partial class App : System.Windows.Application
             SetBrushColor("ControlSelectionBackgroundBrush", MediaColor.FromRgb(0x4C, 0x74, 0xA8));
             SetBrushColor("ControlSelectionForegroundBrush", MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
             SetBrushColor("ControlDisabledBackgroundBrush", MediaColor.FromRgb(0x1D, 0x27, 0x35));
-
-            SetBrushColor(WpfSystemColors.WindowBrushKey, MediaColor.FromRgb(0x23, 0x2F, 0x3F));
-            SetBrushColor(WpfSystemColors.WindowTextBrushKey, MediaColor.FromRgb(0xEE, 0xF2, 0xF8));
-            SetBrushColor(WpfSystemColors.ControlBrushKey, MediaColor.FromRgb(0x23, 0x2F, 0x3F));
-            SetBrushColor(WpfSystemColors.ControlTextBrushKey, MediaColor.FromRgb(0xEE, 0xF2, 0xF8));
-            SetBrushColor(WpfSystemColors.HighlightBrushKey, MediaColor.FromRgb(0x4C, 0x74, 0xA8));
-            SetBrushColor(WpfSystemColors.HighlightTextBrushKey, MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
-            SetBrushColor(WpfSystemColors.GrayTextBrushKey, MediaColor.FromRgb(0x8D, 0x9A, 0xAD));
-            SetBrushColor(WpfSystemColors.InactiveSelectionHighlightBrushKey, MediaColor.FromRgb(0x2E, 0x3D, 0x52));
-            SetBrushColor(WpfSystemColors.InactiveSelectionHighlightTextBrushKey, MediaColor.FromRgb(0xEE, 0xF2, 0xF8));
+            ApplySystemColorOverrides(
+                window: MediaColor.FromRgb(0x23, 0x2F, 0x3F),
+                windowText: MediaColor.FromRgb(0xEE, 0xF2, 0xF8),
+                control: MediaColor.FromRgb(0x23, 0x2F, 0x3F),
+                controlText: MediaColor.FromRgb(0xEE, 0xF2, 0xF8),
+                controlLight: MediaColor.FromRgb(0x2E, 0x3D, 0x52),
+                controlLightLight: MediaColor.FromRgb(0x3A, 0x4E, 0x67),
+                controlDark: MediaColor.FromRgb(0x1B, 0x26, 0x34),
+                controlDarkDark: MediaColor.FromRgb(0x14, 0x1E, 0x2A),
+                menu: MediaColor.FromRgb(0x23, 0x2F, 0x3F),
+                menuText: MediaColor.FromRgb(0xEE, 0xF2, 0xF8),
+                grayText: MediaColor.FromRgb(0xA3, 0xB1, 0xC4),
+                highlight: MediaColor.FromRgb(0x4C, 0x74, 0xA8),
+                highlightText: MediaColor.FromRgb(0xFF, 0xFF, 0xFF),
+                inactiveSelection: MediaColor.FromRgb(0x2E, 0x3D, 0x52),
+                inactiveSelectionText: MediaColor.FromRgb(0xEE, 0xF2, 0xF8));
         }
         else
         {
@@ -121,16 +127,22 @@ public partial class App : System.Windows.Application
             SetBrushColor("ControlSelectionBackgroundBrush", MediaColor.FromRgb(0x2F, 0x6F, 0xB8));
             SetBrushColor("ControlSelectionForegroundBrush", MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
             SetBrushColor("ControlDisabledBackgroundBrush", MediaColor.FromRgb(0xE6, 0xEB, 0xF2));
-
-            SetBrushColor(WpfSystemColors.WindowBrushKey, MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
-            SetBrushColor(WpfSystemColors.WindowTextBrushKey, MediaColor.FromRgb(0x10, 0x18, 0x28));
-            SetBrushColor(WpfSystemColors.ControlBrushKey, MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
-            SetBrushColor(WpfSystemColors.ControlTextBrushKey, MediaColor.FromRgb(0x10, 0x18, 0x28));
-            SetBrushColor(WpfSystemColors.HighlightBrushKey, MediaColor.FromRgb(0x2F, 0x6F, 0xB8));
-            SetBrushColor(WpfSystemColors.HighlightTextBrushKey, MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
-            SetBrushColor(WpfSystemColors.GrayTextBrushKey, MediaColor.FromRgb(0x8A, 0x94, 0xA6));
-            SetBrushColor(WpfSystemColors.InactiveSelectionHighlightBrushKey, MediaColor.FromRgb(0xDC, 0xEA, 0xFF));
-            SetBrushColor(WpfSystemColors.InactiveSelectionHighlightTextBrushKey, MediaColor.FromRgb(0x10, 0x18, 0x28));
+            ApplySystemColorOverrides(
+                window: MediaColor.FromRgb(0xFF, 0xFF, 0xFF),
+                windowText: MediaColor.FromRgb(0x10, 0x18, 0x28),
+                control: MediaColor.FromRgb(0xFF, 0xFF, 0xFF),
+                controlText: MediaColor.FromRgb(0x10, 0x18, 0x28),
+                controlLight: MediaColor.FromRgb(0xF5, 0xF7, 0xFB),
+                controlLightLight: MediaColor.FromRgb(0xFF, 0xFF, 0xFF),
+                controlDark: MediaColor.FromRgb(0xC2, 0xCC, 0xD9),
+                controlDarkDark: MediaColor.FromRgb(0x8B, 0x98, 0xAB),
+                menu: MediaColor.FromRgb(0xFF, 0xFF, 0xFF),
+                menuText: MediaColor.FromRgb(0x10, 0x18, 0x28),
+                grayText: MediaColor.FromRgb(0x8A, 0x94, 0xA6),
+                highlight: MediaColor.FromRgb(0x2F, 0x6F, 0xB8),
+                highlightText: MediaColor.FromRgb(0xFF, 0xFF, 0xFF),
+                inactiveSelection: MediaColor.FromRgb(0xDC, 0xEA, 0xFF),
+                inactiveSelectionText: MediaColor.FromRgb(0x10, 0x18, 0x28));
         }
     }
 
@@ -172,5 +184,60 @@ public partial class App : System.Windows.Application
     private void SetBrushColor(object resourceKey, MediaColor color)
     {
         Resources[resourceKey] = new SolidColorBrush(color);
+    }
+
+    private void SetColor(object resourceKey, MediaColor color)
+    {
+        Resources[resourceKey] = color;
+    }
+
+    private void ApplySystemColorOverrides(
+        MediaColor window,
+        MediaColor windowText,
+        MediaColor control,
+        MediaColor controlText,
+        MediaColor controlLight,
+        MediaColor controlLightLight,
+        MediaColor controlDark,
+        MediaColor controlDarkDark,
+        MediaColor menu,
+        MediaColor menuText,
+        MediaColor grayText,
+        MediaColor highlight,
+        MediaColor highlightText,
+        MediaColor inactiveSelection,
+        MediaColor inactiveSelectionText)
+    {
+        SetBrushColor(WpfSystemColors.WindowBrushKey, window);
+        SetColor(WpfSystemColors.WindowColorKey, window);
+        SetBrushColor(WpfSystemColors.WindowTextBrushKey, windowText);
+        SetColor(WpfSystemColors.WindowTextColorKey, windowText);
+
+        SetBrushColor(WpfSystemColors.ControlBrushKey, control);
+        SetColor(WpfSystemColors.ControlColorKey, control);
+        SetBrushColor(WpfSystemColors.ControlTextBrushKey, controlText);
+        SetColor(WpfSystemColors.ControlTextColorKey, controlText);
+        SetBrushColor(WpfSystemColors.ControlLightBrushKey, controlLight);
+        SetColor(WpfSystemColors.ControlLightColorKey, controlLight);
+        SetBrushColor(WpfSystemColors.ControlLightLightBrushKey, controlLightLight);
+        SetColor(WpfSystemColors.ControlLightLightColorKey, controlLightLight);
+        SetBrushColor(WpfSystemColors.ControlDarkBrushKey, controlDark);
+        SetColor(WpfSystemColors.ControlDarkColorKey, controlDark);
+        SetBrushColor(WpfSystemColors.ControlDarkDarkBrushKey, controlDarkDark);
+        SetColor(WpfSystemColors.ControlDarkDarkColorKey, controlDarkDark);
+
+        SetBrushColor(WpfSystemColors.MenuBrushKey, menu);
+        SetColor(WpfSystemColors.MenuColorKey, menu);
+        SetBrushColor(WpfSystemColors.MenuTextBrushKey, menuText);
+        SetColor(WpfSystemColors.MenuTextColorKey, menuText);
+
+        SetBrushColor(WpfSystemColors.HighlightBrushKey, highlight);
+        SetColor(WpfSystemColors.HighlightColorKey, highlight);
+        SetBrushColor(WpfSystemColors.HighlightTextBrushKey, highlightText);
+        SetColor(WpfSystemColors.HighlightTextColorKey, highlightText);
+        SetBrushColor(WpfSystemColors.GrayTextBrushKey, grayText);
+        SetColor(WpfSystemColors.GrayTextColorKey, grayText);
+        SetBrushColor(WpfSystemColors.InactiveSelectionHighlightBrushKey, inactiveSelection);
+        SetBrushColor(WpfSystemColors.InactiveSelectionHighlightTextBrushKey, inactiveSelectionText);
     }
 }
