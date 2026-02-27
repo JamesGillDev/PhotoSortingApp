@@ -20,5 +20,11 @@ public interface IPhotoEditService
 
     Task<PhotoAsset?> UpdatePathReferenceAsync(int photoId, string fullPath, CancellationToken cancellationToken = default);
 
+    Task<PhotoAsset?> UpdateDetectedSubjectsAsync(
+        int photoId,
+        IReadOnlyList<string> peopleIds,
+        IReadOnlyList<string> animalIds,
+        CancellationToken cancellationToken = default);
+
     Task<bool> DeletePhotoAsync(int photoId, bool deleteFile, CancellationToken cancellationToken = default);
 }

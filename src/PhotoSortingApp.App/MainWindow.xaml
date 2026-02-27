@@ -80,6 +80,22 @@
                              Margin="0,0,8,0"
                              VerticalContentAlignment="Center"
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="0,0,8,0"
+                               VerticalAlignment="Center"
+                               FontWeight="SemiBold"
+                               Text="Person ID:" />
+                    <TextBox Width="150"
+                             Margin="0,0,8,0"
+                             VerticalContentAlignment="Center"
+                             Text="{Binding PersonSearchText, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="0,0,8,0"
+                               VerticalAlignment="Center"
+                               FontWeight="SemiBold"
+                               Text="Animal ID:" />
+                    <TextBox Width="150"
+                             Margin="0,0,8,0"
+                             VerticalContentAlignment="Center"
+                             Text="{Binding AnimalSearchText, UpdateSourceTrigger=PropertyChanged}" />
                     <Button Margin="0,0,8,0"
                             Padding="10,6"
                             Command="{Binding ApplyFiltersCommand}"
@@ -230,20 +246,28 @@
                         <TextBlock VerticalAlignment="Center"
                                    FontWeight="SemiBold"
                                    Text="{Binding ResultsSummary}" />
+                        <TextBlock Margin="14,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="{Binding SelectedPhotosSummary}" />
                     </DockPanel>
 
                     <Grid Grid.Row="1">
-                        <ListBox BorderThickness="0"
+                        <ListBox x:Name="TilePhotosList"
+                                 BorderThickness="0"
                                  Background="Transparent"
                                  ItemsSource="{Binding Photos}"
                                  SelectedItem="{Binding SelectedPhoto}"
+                                 SelectionMode="Extended"
+                                 SelectionChanged="PhotoList_SelectionChanged"
                                  Visibility="{Binding IsTileLayout, Converter={StaticResource BoolToVisibilityConverter}}"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                  ScrollViewer.CanContentScroll="False">
                             <ListBox.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal" />
+                                    <WrapPanel Orientation="Horizontal"
+                                               Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ScrollContentPresenter}}" />
                                 </ItemsPanelTemplate>
                             </ListBox.ItemsPanel>
                             <ListBox.ItemTemplate>
@@ -277,10 +301,13 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <ListBox BorderThickness="0"
+                        <ListBox x:Name="ListPhotosList"
+                                 BorderThickness="0"
                                  Background="Transparent"
                                  ItemsSource="{Binding Photos}"
                                  SelectedItem="{Binding SelectedPhoto}"
+                                 SelectionMode="Extended"
+                                 SelectionChanged="PhotoList_SelectionChanged"
                                  Visibility="{Binding IsTileLayout, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
@@ -366,6 +393,8 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0"
@@ -418,6 +447,22 @@
                             <TextBlock Grid.Row="6"
                                        Grid.Column="1"
                                        Text="{Binding SelectedPhoto.Asset.Notes}" />
+
+                            <TextBlock Grid.Row="7"
+                                       Grid.Column="0"
+                                       Text="People IDs:" />
+                            <TextBlock Grid.Row="7"
+                                       Grid.Column="1"
+                                       Text="{Binding DetectedPeopleText}"
+                                       TextWrapping="Wrap" />
+
+                            <TextBlock Grid.Row="8"
+                                       Grid.Column="0"
+                                       Text="Animal IDs:" />
+                            <TextBlock Grid.Row="8"
+                                       Grid.Column="1"
+                                       Text="{Binding DetectedAnimalsText}"
+                                       TextWrapping="Wrap" />
                         </Grid>
 
                         <TextBlock FontWeight="SemiBold"
@@ -428,16 +473,34 @@
                                   SelectedItem="{Binding SelectedRenameSuggestion}" />
                         <TextBox Margin="0,0,0,6"
                                  Text="{Binding RenameInput, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Margin="0,0,0,6"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="{Binding SmartRenameSummary}"
+                                   TextWrapping="Wrap" />
                         <StackPanel Margin="0,0,0,10"
                                     Orientation="Horizontal">
                             <Button Margin="0,0,8,0"
                                     Padding="10,6"
                                     Command="{Binding ApplyRenameSuggestionCommand}"
                                     Content="Use Suggestion" />
+                            <Button Margin="0,0,8,0"
+                                    Padding="10,6"
+                                    Command="{Binding SmartRenameSelectedCommand}"
+                                    Content="Smart Rename Selected" />
                             <Button Padding="10,6"
                                     Command="{Binding RenamePhotoCommand}"
                                     Content="Rename" />
                         </StackPanel>
+
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="Identity Scan" />
+                        <TextBlock Margin="0,4,0,6"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="{Binding SelectedPhotosSummary}" />
+                        <Button Margin="0,0,0,10"
+                                Padding="10,6"
+                                Command="{Binding IdentifyPeopleAnimalsCommand}"
+                                Content="Scan People / Animals" />
 
                         <TextBlock FontWeight="SemiBold"
                                    Text="Tags" />

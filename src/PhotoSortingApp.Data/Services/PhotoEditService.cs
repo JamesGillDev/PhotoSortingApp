@@ -150,7 +150,9 @@ public class PhotoEditService : IPhotoEditService
             IndexedUtc = now,
             UpdatedUtc = now,
             Notes = asset.Notes,
-            TagsCsv = asset.TagsCsv
+            TagsCsv = asset.TagsCsv,
+            PeopleCsv = asset.PeopleCsv,
+            AnimalsCsv = asset.AnimalsCsv
         };
 
         db.PhotoAssets.Add(copy);
@@ -212,7 +214,9 @@ public class PhotoEditService : IPhotoEditService
             IndexedUtc = now,
             UpdatedUtc = now,
             Notes = asset.Notes,
-            TagsCsv = asset.TagsCsv
+            TagsCsv = asset.TagsCsv,
+            PeopleCsv = asset.PeopleCsv,
+            AnimalsCsv = asset.AnimalsCsv
         };
 
         db.PhotoAssets.Add(duplicate);
@@ -327,6 +331,29 @@ public class PhotoEditService : IPhotoEditService
         }
 
         ApplyPathState(asset, fullPath, refreshFromFileIfExists: true);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return asset;
+    }
+
+    public async Task<PhotoAsset?> UpdateDetectedSubjectsAsync(
+        int photoId,
+        IReadOnlyList<string> peopleIds,
+        IReadOnlyList<string> animalIds,
+        CancellationToken cancellationToken = default)
+    {
+        using var db = _contextFactory();
+        var asset = await db.PhotoAssets
+            .SingleOrDefaultAsync(x => x.Id == photoId, cancellationToken)
+            .ConfigureAwait(false);
+        if (asset is null)
+        {
+            return null;
+        }
+
+        asset.PeopleCsv = SerializeIds(peopleIds);
+        asset.AnimalsCsv = SerializeIds(animalIds);
+        asset.UpdatedUtc = DateTime.UtcNow;
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return asset;
     }
@@ -535,6 +562,32 @@ public class PhotoEditService : IPhotoEditService
             .Select(ch => invalidChars.Contains(ch) ? '_' : ch)
             .ToArray());
         return cleaned.Trim();
+    }
+
+    private static string? SerializeIds(IEnumerable<string> ids)
+    {
+        var normalized = ids
+            .Select(NormalizeIdentifier)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(100)
+            .ToList();
+
+        return normalized.Count == 0
+            ? null
+            : string.Join(',', normalized);
+    }
+
+    private static string NormalizeIdentifier(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return string.Empty;
+        }
+
+        var compact = string.Join('_', id
+            .Split(new[] { ' ', '\t', '\r', '\n', ',', ';', ':', '/', '\\' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        return compact.Trim();
     }
 
     private static bool PathsEqual(string left, string right)

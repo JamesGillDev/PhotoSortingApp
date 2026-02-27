@@ -126,7 +126,11 @@ public class ScanService : IScanService
         foreach (var fullPath in filePaths)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            seenPaths.Add(fullPath);
+            if (!seenPaths.Add(fullPath))
+            {
+                skipped++;
+                continue;
+            }
 
             try
             {
@@ -161,6 +165,7 @@ public class ScanService : IScanService
                     };
                     await PopulatePhotoEntityAsync(entity, root, info, isNew: true, cancellationToken).ConfigureAwait(false);
                     db.PhotoAssets.Add(entity);
+                    existingByPath[fullPath] = entity;
                     indexed++;
                     pendingWrites++;
                 }

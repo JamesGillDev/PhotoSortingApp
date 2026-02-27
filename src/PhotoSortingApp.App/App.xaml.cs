@@ -77,7 +77,7 @@ public partial class App : System.Windows.Application
             SetBrushColor("ControlBackgroundBrush", MediaColor.FromRgb(0x23, 0x2F, 0x3F));
             SetBrushColor("ControlBorderBrush", MediaColor.FromRgb(0x45, 0x57, 0x70));
             SetBrushColor("ControlForegroundBrush", MediaColor.FromRgb(0xEE, 0xF2, 0xF8));
-            SetBrushColor("DisabledForegroundBrush", MediaColor.FromRgb(0xA3, 0xB1, 0xC4));
+            SetBrushColor("DisabledForegroundBrush", MediaColor.FromRgb(0xC5, 0xD0, 0xDD));
             SetBrushColor("SelectionBrush", MediaColor.FromRgb(0x4C, 0x74, 0xA8));
             SetBrushColor("ControlPopupBackgroundBrush", MediaColor.FromRgb(0x23, 0x2F, 0x3F));
             SetBrushColor("ControlPopupBorderBrush", MediaColor.FromRgb(0x45, 0x57, 0x70));
@@ -85,7 +85,7 @@ public partial class App : System.Windows.Application
             SetBrushColor("ControlPressedBrush", MediaColor.FromRgb(0x39, 0x4B, 0x65));
             SetBrushColor("ControlSelectionBackgroundBrush", MediaColor.FromRgb(0x4C, 0x74, 0xA8));
             SetBrushColor("ControlSelectionForegroundBrush", MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
-            SetBrushColor("ControlDisabledBackgroundBrush", MediaColor.FromRgb(0x1D, 0x27, 0x35));
+            SetBrushColor("ControlDisabledBackgroundBrush", MediaColor.FromRgb(0x2A, 0x37, 0x49));
             ApplySystemColorOverrides(
                 window: MediaColor.FromRgb(0x23, 0x2F, 0x3F),
                 windowText: MediaColor.FromRgb(0xEE, 0xF2, 0xF8),
@@ -118,7 +118,7 @@ public partial class App : System.Windows.Application
             SetBrushColor("ControlBackgroundBrush", MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
             SetBrushColor("ControlBorderBrush", MediaColor.FromRgb(0xB9, 0xC2, 0xCF));
             SetBrushColor("ControlForegroundBrush", MediaColor.FromRgb(0x10, 0x18, 0x28));
-            SetBrushColor("DisabledForegroundBrush", MediaColor.FromRgb(0x8A, 0x94, 0xA6));
+            SetBrushColor("DisabledForegroundBrush", MediaColor.FromRgb(0x66, 0x70, 0x83));
             SetBrushColor("SelectionBrush", MediaColor.FromRgb(0xCC, 0xE4, 0xFF));
             SetBrushColor("ControlPopupBackgroundBrush", MediaColor.FromRgb(0xFF, 0xFF, 0xFF));
             SetBrushColor("ControlPopupBorderBrush", MediaColor.FromRgb(0xB9, 0xC2, 0xCF));

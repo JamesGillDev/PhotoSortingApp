@@ -45,5 +45,9 @@ public class PhotoAsset
 
     public string? TagsCsv { get; set; }
 
+    public string? PeopleCsv { get; set; }
+
+    public string? AnimalsCsv { get; set; }
+
     public ScanRoot? ScanRoot { get; set; }
 }

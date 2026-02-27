@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.2.0] - 2026-02-27
+
+### Added
+- Gallery multi-select support (Ctrl/Shift selection) with selected-count feedback.
+- Batch `Smart Rename Selected` workflow using smart image analysis.
+- Person and animal identity scan for selected photos, with persistence in `PeopleCsv` and `AnimalsCsv`.
+- Person/animal filter inputs in the top bar for searchable identity lookup.
+- New EF Core migration `AddPeopleAndAnimalsCsv` for identity storage columns.
+
+### Changed
+- Rename assistant now consumes structured smart analysis (setting/season/holiday/time-of-day/shot type/subjects).
+- Tile view wrapping now targets vertical-only scrolling behavior without horizontal gallery scrolling.
+- Dark/light disabled control colors were adjusted for stronger text readability.
+- Scan pipeline now de-duplicates discovered file paths before insert to avoid SQLite unique-constraint save failures on overlapping traversal results.
+
 ## [1.1.0] - 2026-02-27
 
 ### Added

@@ -23,9 +23,11 @@ public class MainViewModel : ObservableObject
     private CancellationTokenSource? _queryCts;
     private CancellationTokenSource? _previewCts;
     private CancellationTokenSource? _thumbnailCts;
+    private CancellationTokenSource? _analysisCts;
     private bool _isReady;
     private bool _suppressDuplicateUpdate;
     private bool _isLoadingPhotos;
+    private bool _isApplyingSmartActions;
     private int _nextPage = 1;
     private int _loadedCount;
     private List<OrganizerPlanItem> _latestOrganizerPlanItems = new();
@@ -49,6 +51,11 @@ public class MainViewModel : ObservableObject
     private string _tagInputText = string.Empty;
     private string? _selectedTag;
     private string _searchText = string.Empty;
+    private string _personSearchText = string.Empty;
+    private string _animalSearchText = string.Empty;
+    private string _detectedPeopleText = string.Empty;
+    private string _detectedAnimalsText = string.Empty;
+    private string _smartRenameSummary = string.Empty;
     private string _statusMessage = "Select a folder to begin indexing.";
     private string _indexingStatus = string.Empty;
     private string _planSummary = "No organizer plan generated yet.";
@@ -67,6 +74,7 @@ public class MainViewModel : ObservableObject
         FolderFilters = new ObservableCollection<FolderFilterItemViewModel>();
         DuplicateGroups = new ObservableCollection<DuplicateGroupItemViewModel>();
         Photos = new ObservableCollection<PhotoItemViewModel>();
+        SelectedPhotos = new ObservableCollection<PhotoItemViewModel>();
         OrganizerPreviewItems = new ObservableCollection<OrganizerPlanItem>();
         RenameSuggestions = new ObservableCollection<RenameSuggestionItemViewModel>();
         PhotoTags = new ObservableCollection<string>();
@@ -123,6 +131,8 @@ public class MainViewModel : ObservableObject
         RefreshDuplicatesCommand = new AsyncRelayCommand(RefreshDuplicatesAsync, () => SelectedScanRoot is not null && EnableDuplicateDetection);
         ApplyRenameSuggestionCommand = new RelayCommand(ApplyRenameSuggestion, () => SelectedPhoto is not null && SelectedRenameSuggestion is not null);
         RenamePhotoCommand = new AsyncRelayCommand(RenamePhotoAsync, () => SelectedPhoto is not null && !string.IsNullOrWhiteSpace(RenameInput));
+        SmartRenameSelectedCommand = new AsyncRelayCommand(SmartRenameSelectedAsync, () => SelectedPhotosCount > 0 && !_isApplyingSmartActions && !IsIndexing);
+        IdentifyPeopleAnimalsCommand = new AsyncRelayCommand(IdentifyPeopleAnimalsAsync, () => SelectedPhotosCount > 0 && !_isApplyingSmartActions && !IsIndexing);
         MovePhotoCommand = new AsyncRelayCommand(MovePhotoAsync, () => SelectedPhoto is not null && !IsIndexing);
         CopyPhotoCommand = new AsyncRelayCommand(CopyPhotoAsync, () => SelectedPhoto is not null && !IsIndexing);
         DuplicatePhotoCommand = new AsyncRelayCommand(DuplicatePhotoAsync, () => SelectedPhoto is not null && !IsIndexing);
@@ -151,6 +161,8 @@ public class MainViewModel : ObservableObject
     public ObservableCollection<DuplicateGroupItemViewModel> DuplicateGroups { get; }
 
     public ObservableCollection<PhotoItemViewModel> Photos { get; }
+
+    public ObservableCollection<PhotoItemViewModel> SelectedPhotos { get; }
 
     public ObservableCollection<OrganizerPlanItem> OrganizerPreviewItems { get; }
 
@@ -187,6 +199,10 @@ public class MainViewModel : ObservableObject
     public ICommand ApplyRenameSuggestionCommand { get; }
 
     public ICommand RenamePhotoCommand { get; }
+
+    public ICommand SmartRenameSelectedCommand { get; }
+
+    public ICommand IdentifyPeopleAnimalsCommand { get; }
 
     public ICommand MovePhotoCommand { get; }
 
@@ -322,6 +338,15 @@ public class MainViewModel : ObservableObject
                 return;
             }
 
+            if (value is null)
+            {
+                SetSelectedPhotos(Array.Empty<PhotoItemViewModel>());
+            }
+            else if (SelectedPhotos.All(x => x.Id != value.Id))
+            {
+                SetSelectedPhotos(new[] { value });
+            }
+
             _ = LoadPreviewAsync(value);
             _ = OnSelectedPhotoChangedAsync(value);
             RaiseCommandCanExecute();
@@ -427,6 +452,36 @@ public class MainViewModel : ObservableObject
         set => SetProperty(ref _searchText, value);
     }
 
+    public string PersonSearchText
+    {
+        get => _personSearchText;
+        set => SetProperty(ref _personSearchText, value);
+    }
+
+    public string AnimalSearchText
+    {
+        get => _animalSearchText;
+        set => SetProperty(ref _animalSearchText, value);
+    }
+
+    public string DetectedPeopleText
+    {
+        get => _detectedPeopleText;
+        private set => SetProperty(ref _detectedPeopleText, value);
+    }
+
+    public string DetectedAnimalsText
+    {
+        get => _detectedAnimalsText;
+        private set => SetProperty(ref _detectedAnimalsText, value);
+    }
+
+    public string SmartRenameSummary
+    {
+        get => _smartRenameSummary;
+        private set => SetProperty(ref _smartRenameSummary, value);
+    }
+
     public string StatusMessage
     {
         get => _statusMessage;
@@ -506,6 +561,12 @@ public class MainViewModel : ObservableObject
 
     public string ResultsSummary => $"{Photos.Count} loaded / {TotalResults} matched";
 
+    public int SelectedPhotosCount => SelectedPhotos.Count;
+
+    public string SelectedPhotosSummary => SelectedPhotosCount == 1
+        ? "1 photo selected"
+        : $"{SelectedPhotosCount} photos selected";
+
     public bool IsTileLayout => SelectedLayoutOption?.Value != GalleryLayoutMode.List;
 
     public async Task InitializeAsync()
@@ -514,11 +575,38 @@ public class MainViewModel : ObservableObject
         _isReady = true;
     }
 
+    public void SetSelectedPhotos(IReadOnlyList<PhotoItemViewModel> selectedItems)
+    {
+        var normalized = selectedItems
+            .Where(x => x is not null)
+            .GroupBy(x => x.Id)
+            .Select(g => g.First())
+            .ToList();
+
+        var hasChanged = SelectedPhotos.Count != normalized.Count ||
+                         SelectedPhotos.Select(x => x.Id).Except(normalized.Select(x => x.Id)).Any();
+        if (!hasChanged)
+        {
+            return;
+        }
+
+        SelectedPhotos.Clear();
+        foreach (var item in normalized)
+        {
+            SelectedPhotos.Add(item);
+        }
+
+        RaisePropertyChanged(nameof(SelectedPhotosCount));
+        RaisePropertyChanged(nameof(SelectedPhotosSummary));
+        RaiseCommandCanExecute();
+    }
+
     private async Task OnSelectedScanRootChangedAsync()
     {
         if (SelectedScanRoot is null)
         {
             Photos.Clear();
+            SelectedPhotos.Clear();
             SmartAlbums.Clear();
             FolderFilters.Clear();
             DuplicateGroups.Clear();
@@ -527,12 +615,17 @@ public class MainViewModel : ObservableObject
             PhotoTags.Clear();
             SelectedTag = null;
             RenameInput = string.Empty;
+            DetectedPeopleText = string.Empty;
+            DetectedAnimalsText = string.Empty;
+            SmartRenameSummary = string.Empty;
             _latestOrganizerPlanItems.Clear();
             SelectedPhoto = null;
             PreviewImage = null;
             PlanSummary = "No organizer plan generated yet.";
             StatusMessage = "Select a folder to begin indexing.";
             RaisePropertyChanged(nameof(ResultsSummary));
+            RaisePropertyChanged(nameof(SelectedPhotosCount));
+            RaisePropertyChanged(nameof(SelectedPhotosSummary));
             RaiseCommandCanExecute();
             return;
         }
@@ -544,6 +637,9 @@ public class MainViewModel : ObservableObject
         PhotoTags.Clear();
         SelectedTag = null;
         RenameInput = string.Empty;
+        DetectedPeopleText = string.Empty;
+        DetectedAnimalsText = string.Empty;
+        SmartRenameSummary = string.Empty;
         OrganizerPreviewItems.Clear();
         _latestOrganizerPlanItems.Clear();
         PlanSummary = "No organizer plan generated yet.";
@@ -899,6 +995,9 @@ public class MainViewModel : ObservableObject
             _nextPage = 1;
             _loadedCount = 0;
             Photos.Clear();
+            SelectedPhotos.Clear();
+            RaisePropertyChanged(nameof(SelectedPhotosCount));
+            RaisePropertyChanged(nameof(SelectedPhotosSummary));
             SelectedPhoto = null;
             PreviewImage = null;
         }
@@ -956,6 +1055,8 @@ public class MainViewModel : ObservableObject
         {
             ScanRootId = SelectedScanRoot?.Id,
             SearchText = SearchText,
+            PersonSearchText = PersonSearchText,
+            AnimalSearchText = AnimalSearchText,
             FromDateUtc = FromDateLocal.HasValue
                 ? DateTime.SpecifyKind(FromDateLocal.Value.Date, DateTimeKind.Local).ToUniversalTime()
                 : null,
@@ -1044,6 +1145,11 @@ public class MainViewModel : ObservableObject
 
     private async Task OnSelectedPhotoChangedAsync(PhotoItemViewModel? selected)
     {
+        _analysisCts?.Cancel();
+        _analysisCts?.Dispose();
+        _analysisCts = new CancellationTokenSource();
+        var analysisToken = _analysisCts.Token;
+
         RenameSuggestions.Clear();
         SelectedRenameSuggestion = null;
         PhotoTags.Clear();
@@ -1053,25 +1159,46 @@ public class MainViewModel : ObservableObject
         if (selected is null)
         {
             RenameInput = string.Empty;
+            DetectedPeopleText = string.Empty;
+            DetectedAnimalsText = string.Empty;
+            SmartRenameSummary = string.Empty;
             return;
         }
 
         RenameInput = Path.GetFileNameWithoutExtension(selected.FileName);
+        var storedPeople = ParseCsvIds(selected.Asset.PeopleCsv);
+        var storedAnimals = ParseCsvIds(selected.Asset.AnimalsCsv);
 
         try
         {
             var tags = await _services.TaggingService.GetTagsAsync(selected.Id).ConfigureAwait(true);
             SetPhotoTags(tags);
-            PopulateRenameSuggestions(selected, tags);
+            var analysis = await _services.SmartRenameService
+                .AnalyzeAsync(selected.Asset, tags, analysisToken)
+                .ConfigureAwait(true);
+            if (analysisToken.IsCancellationRequested || SelectedPhoto?.Id != selected.Id)
+            {
+                return;
+            }
+
+            PopulateRenameSuggestions(selected, tags, analysis);
+            ApplyDetectedIdentityText(analysis.DetectedPeople, analysis.DetectedAnimals, storedPeople, storedAnimals);
+            SmartRenameSummary = BuildSmartSummary(analysis);
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore when selection changes quickly.
         }
         catch (Exception ex)
         {
-            PopulateRenameSuggestions(selected, Array.Empty<string>());
+            PopulateRenameSuggestions(selected, Array.Empty<string>(), null);
+            ApplyDetectedIdentityText(Array.Empty<string>(), Array.Empty<string>(), storedPeople, storedAnimals);
+            SmartRenameSummary = string.Empty;
             StatusMessage = $"Unable to load tags for selected photo: {ex.Message}";
         }
     }
 
-    private void PopulateRenameSuggestions(PhotoItemViewModel photo, IReadOnlyList<string> tags)
+    private void PopulateRenameSuggestions(PhotoItemViewModel photo, IReadOnlyList<string> tags, SmartRenameAnalysis? analysis)
     {
         RenameSuggestions.Clear();
 
@@ -1079,6 +1206,11 @@ public class MainViewModel : ObservableObject
         var localDate = (photo.Asset.DateTaken ?? photo.Asset.FileLastWriteUtc).ToLocalTime();
         var camera = $"{photo.Asset.CameraMake} {photo.Asset.CameraModel}".Trim();
         var folderName = Path.GetFileName(photo.Asset.FolderPath);
+
+        if (analysis is not null && !string.IsNullOrWhiteSpace(analysis.SuggestedBaseName))
+        {
+            AddRenameSuggestion($"{analysis.SuggestedBaseName}{extension}");
+        }
 
         AddRenameSuggestion($"IMG_{localDate:yyyyMMdd_HHmmss}{extension}");
 
@@ -1091,6 +1223,12 @@ public class MainViewModel : ObservableObject
         {
             var tagToken = string.Join("_", tags.Take(3).Select(SanitizeFileToken));
             AddRenameSuggestion($"{tagToken}_{localDate:yyyyMMdd}{extension}");
+        }
+
+        if (analysis is not null && analysis.SubjectTags.Count > 0)
+        {
+            var subjectToken = string.Join("_", analysis.SubjectTags.Take(3).Select(SanitizeFileToken));
+            AddRenameSuggestion($"{localDate:yyyyMMdd}_{subjectToken}{extension}");
         }
 
         if (!string.IsNullOrWhiteSpace(folderName))
@@ -1131,6 +1269,210 @@ public class MainViewModel : ObservableObject
         }
 
         RenameInput = Path.GetFileNameWithoutExtension(SelectedRenameSuggestion.FileName);
+    }
+
+    private IReadOnlyList<PhotoItemViewModel> GetBatchSelection()
+    {
+        if (SelectedPhotos.Count > 0)
+        {
+            return SelectedPhotos.ToList();
+        }
+
+        return SelectedPhoto is null
+            ? Array.Empty<PhotoItemViewModel>()
+            : new[] { SelectedPhoto };
+    }
+
+    private async Task SmartRenameSelectedAsync()
+    {
+        var selection = GetBatchSelection();
+        if (selection.Count == 0)
+        {
+            return;
+        }
+
+        var confirmation = System.Windows.MessageBox.Show(
+            $"Apply smart rename to {selection.Count} selected photo(s)?",
+            "Smart Rename",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Question);
+        if (confirmation != System.Windows.MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        _isApplyingSmartActions = true;
+        RaiseCommandCanExecute();
+
+        var renamed = 0;
+        var skipped = 0;
+        var failed = 0;
+        var undoItems = new List<(int PhotoId, string OldPath)>();
+        var preferredId = selection[0].Id;
+
+        try
+        {
+            StatusMessage = $"Running smart rename on {selection.Count} photo(s)...";
+
+            foreach (var item in selection)
+            {
+                try
+                {
+                    var current = await _services.PhotoEditService.GetPhotoByIdAsync(item.Id).ConfigureAwait(true);
+                    if (current is null)
+                    {
+                        failed++;
+                        continue;
+                    }
+
+                    var tags = await _services.TaggingService.GetTagsAsync(item.Id).ConfigureAwait(true);
+                    var analysis = await _services.SmartRenameService
+                        .AnalyzeAsync(current, tags)
+                        .ConfigureAwait(true);
+
+                    var baseName = string.IsNullOrWhiteSpace(analysis.SuggestedBaseName)
+                        ? SanitizeFileToken(Path.GetFileNameWithoutExtension(current.FileName))
+                        : SanitizeFileToken(analysis.SuggestedBaseName);
+                    if (string.IsNullOrWhiteSpace(baseName))
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    var targetName = BuildRequestedFileName(baseName, current.Extension);
+                    if (string.Equals(targetName, current.FileName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    _services.ThumbnailService.Invalidate(current);
+                    var updated = await _services.PhotoEditService
+                        .RenamePhotoAsync(item.Id, targetName)
+                        .ConfigureAwait(true);
+                    if (updated is null)
+                    {
+                        failed++;
+                        continue;
+                    }
+
+                    undoItems.Add((item.Id, current.FullPath));
+                    renamed++;
+                }
+                catch
+                {
+                    failed++;
+                }
+            }
+
+            if (undoItems.Count > 0)
+            {
+                PushUndoAction(
+                    $"Smart rename batch ({undoItems.Count} photo(s))",
+                    async () =>
+                    {
+                        foreach (var action in undoItems.AsEnumerable().Reverse())
+                        {
+                            await _services.PhotoEditService
+                                .RelocatePhotoAsync(action.PhotoId, action.OldPath)
+                                .ConfigureAwait(true);
+                        }
+
+                        await RefreshAfterPhotoMutationAsync(preferredId, refreshFilters: false).ConfigureAwait(true);
+                        return $"Undo complete: restored {undoItems.Count} photo path(s).";
+                    });
+            }
+
+            await RefreshAfterPhotoMutationAsync(preferredId, refreshFilters: false).ConfigureAwait(true);
+            StatusMessage = $"Smart rename complete. Renamed {renamed}, skipped {skipped}, failed {failed}.";
+        }
+        finally
+        {
+            _isApplyingSmartActions = false;
+            RaiseCommandCanExecute();
+        }
+    }
+
+    private async Task IdentifyPeopleAnimalsAsync()
+    {
+        var selection = GetBatchSelection();
+        if (selection.Count == 0)
+        {
+            return;
+        }
+
+        _isApplyingSmartActions = true;
+        RaiseCommandCanExecute();
+
+        var updated = 0;
+        var failed = 0;
+        var previousValues = new List<(int PhotoId, IReadOnlyList<string> People, IReadOnlyList<string> Animals)>();
+        var preferredId = selection[0].Id;
+
+        try
+        {
+            StatusMessage = $"Analyzing people/animals in {selection.Count} photo(s)...";
+
+            foreach (var item in selection)
+            {
+                try
+                {
+                    var current = await _services.PhotoEditService.GetPhotoByIdAsync(item.Id).ConfigureAwait(true);
+                    if (current is null)
+                    {
+                        failed++;
+                        continue;
+                    }
+
+                    var tags = await _services.TaggingService.GetTagsAsync(item.Id).ConfigureAwait(true);
+                    var analysis = await _services.SmartRenameService
+                        .AnalyzeAsync(current, tags)
+                        .ConfigureAwait(true);
+
+                    previousValues.Add((item.Id, ParseCsvIds(current.PeopleCsv), ParseCsvIds(current.AnimalsCsv)));
+                    var persisted = await _services.PhotoEditService
+                        .UpdateDetectedSubjectsAsync(item.Id, analysis.DetectedPeople, analysis.DetectedAnimals)
+                        .ConfigureAwait(true);
+                    if (persisted is null)
+                    {
+                        failed++;
+                        continue;
+                    }
+
+                    updated++;
+                }
+                catch
+                {
+                    failed++;
+                }
+            }
+
+            if (updated > 0)
+            {
+                PushUndoAction(
+                    $"Identify people/animals ({updated} photo(s))",
+                    async () =>
+                    {
+                        foreach (var action in previousValues)
+                        {
+                            await _services.PhotoEditService
+                                .UpdateDetectedSubjectsAsync(action.PhotoId, action.People, action.Animals)
+                                .ConfigureAwait(true);
+                        }
+
+                        await RefreshAfterPhotoMutationAsync(preferredId, refreshFilters: false).ConfigureAwait(true);
+                        return $"Undo complete: restored people/animal IDs for {previousValues.Count} photo(s).";
+                    });
+            }
+
+            await RefreshAfterPhotoMutationAsync(preferredId, refreshFilters: false).ConfigureAwait(true);
+            StatusMessage = $"Identity scan complete. Updated {updated}, failed {failed}.";
+        }
+        finally
+        {
+            _isApplyingSmartActions = false;
+            RaiseCommandCanExecute();
+        }
     }
 
     private async Task RenamePhotoAsync()
@@ -1480,7 +1822,7 @@ public class MainViewModel : ObservableObject
 
             if (SelectedPhoto?.Id == result.Id)
             {
-                PopulateRenameSuggestions(SelectedPhoto, PhotoTags.ToList());
+                PopulateRenameSuggestions(SelectedPhoto, PhotoTags.ToList(), null);
             }
 
             PushUndoAction(
@@ -1493,7 +1835,7 @@ public class MainViewModel : ObservableObject
                     if (SelectedPhoto?.Id == photoId)
                     {
                         SetPhotoTags(previousTags);
-                        PopulateRenameSuggestions(SelectedPhoto, PhotoTags.ToList());
+                        PopulateRenameSuggestions(SelectedPhoto, PhotoTags.ToList(), null);
                     }
 
                     return reverted is null
@@ -1605,6 +1947,56 @@ public class MainViewModel : ObservableObject
         }
 
         RaiseCommandCanExecute();
+    }
+
+    private void ApplyDetectedIdentityText(
+        IReadOnlyList<string> analysisPeople,
+        IReadOnlyList<string> analysisAnimals,
+        IReadOnlyList<string> storedPeople,
+        IReadOnlyList<string> storedAnimals)
+    {
+        var people = analysisPeople
+            .Concat(storedPeople)
+            .Select(SanitizeFileToken)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var animals = analysisAnimals
+            .Concat(storedAnimals)
+            .Select(SanitizeFileToken)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        DetectedPeopleText = people.Count == 0 ? "(none)" : string.Join(", ", people);
+        DetectedAnimalsText = animals.Count == 0 ? "(none)" : string.Join(", ", animals);
+    }
+
+    private static IReadOnlyList<string> ParseCsvIds(string? csv)
+    {
+        if (string.IsNullOrWhiteSpace(csv))
+        {
+            return Array.Empty<string>();
+        }
+
+        return csv
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(SanitizeFileToken)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string BuildSmartSummary(SmartRenameAnalysis analysis)
+    {
+        if (string.IsNullOrWhiteSpace(analysis.Summary))
+        {
+            return analysis.UsedVisionModel ? "Vision model analysis complete." : "Heuristic analysis complete.";
+        }
+
+        return analysis.UsedVisionModel
+            ? $"Vision: {analysis.Summary}"
+            : analysis.Summary;
     }
 
     private static IReadOnlyList<string> ParseTagInput(string rawInput)
@@ -1788,6 +2180,8 @@ public class MainViewModel : ObservableObject
     private async Task ClearFiltersAsync()
     {
         SearchText = string.Empty;
+        PersonSearchText = string.Empty;
+        AnimalSearchText = string.Empty;
         FromDateLocal = null;
         ToDateLocal = null;
         SelectedDateSource = DateSourceOptions[0];
@@ -1881,6 +2275,8 @@ public class MainViewModel : ObservableObject
         ((AsyncRelayCommand)RefreshDuplicatesCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ApplyRenameSuggestionCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)RenamePhotoCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)SmartRenameSelectedCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)IdentifyPeopleAnimalsCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)MovePhotoCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)CopyPhotoCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)DuplicatePhotoCommand).RaiseCanExecuteChanged();

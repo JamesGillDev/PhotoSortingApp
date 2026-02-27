@@ -22,6 +22,7 @@ public class AppServices
         DuplicateService = new DuplicateService(_contextFactory);
         OrganizerPlanService = new OrganizerPlanService(_contextFactory, baseDirectory);
         PhotoEditService = new PhotoEditService(_contextFactory);
+        SmartRenameService = new SmartRenameService();
 
         TaggingService = new DatabaseTaggingService(_contextFactory);
         SemanticSearchService = new EmptySemanticSearchService();
@@ -41,6 +42,8 @@ public class AppServices
     public IOrganizerPlanService OrganizerPlanService { get; }
 
     public IPhotoEditService PhotoEditService { get; }
+
+    public ISmartRenameService SmartRenameService { get; }
 
     public ITaggingService TaggingService { get; }
 

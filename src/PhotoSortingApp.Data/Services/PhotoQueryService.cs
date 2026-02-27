@@ -37,6 +37,18 @@ public class PhotoQueryService : IPhotoQueryService
                 (x.TagsCsv != null && x.TagsCsv.Contains(search)));
         }
 
+        if (!string.IsNullOrWhiteSpace(filter.PersonSearchText))
+        {
+            var personSearch = filter.PersonSearchText.Trim();
+            query = query.Where(x => x.PeopleCsv != null && x.PeopleCsv.Contains(personSearch));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.AnimalSearchText))
+        {
+            var animalSearch = filter.AnimalSearchText.Trim();
+            query = query.Where(x => x.AnimalsCsv != null && x.AnimalsCsv.Contains(animalSearch));
+        }
+
         if (filter.FromDateUtc.HasValue)
         {
             query = query.Where(x => x.DateTaken != null && x.DateTaken >= filter.FromDateUtc.Value);

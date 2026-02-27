@@ -8,6 +8,10 @@ public class PhotoQueryFilter
 
     public string? SearchText { get; set; }
 
+    public string? PersonSearchText { get; set; }
+
+    public string? AnimalSearchText { get; set; }
+
     public DateTime? FromDateUtc { get; set; }
 
     public DateTime? ToDateUtc { get; set; }

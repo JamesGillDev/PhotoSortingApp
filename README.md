@@ -3,7 +3,7 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/UI-WPF-512BD4)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![EF%20Core](https://img.shields.io/badge/EF%20Core-8.0-5C2D91)](https://learn.microsoft.com/ef/core/)
-[![Version](https://img.shields.io/badge/Version-1.1.0-brightgreen)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.2.0-brightgreen)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-BLS%201.1-blue.svg)](./LICENSE.md)
 
 PhotoSortingApp is a local-first Windows desktop photo catalog and safe organizer planner.
@@ -33,6 +33,8 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
 - Gallery layout options:
   - Tiles (default)
   - List
+- Tile layout wraps within the viewport and scrolls vertically (no side scrolling)
+- Multiple photo selection in gallery (Ctrl/Shift multi-select)
 - Sort options:
   - date taken
   - date indexed
@@ -47,6 +49,8 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
   - date source
   - folder subpath
   - filename / notes / tags search
+  - person ID search
+  - animal ID search
 - Smart Albums:
   - All Photos
   - By Month
@@ -57,7 +61,13 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
 - Duplicate detection toggle (SHA-256 only when enabled)
 - Rename assistant for selected photos:
   - metadata-informed name suggestions (date/camera/folder/tags)
+  - AI-powered smart rename analysis (optional) for setting/season/holiday/shot type/subjects
   - manual rename input with one-click apply
+  - batch "Smart Rename Selected" action for multi-selected photos
+- Identity scan tool for selected photos:
+  - detects and stores `PeopleCsv` IDs
+  - detects and stores `AnimalsCsv` IDs
+  - searchable from the top filter bar
 - Tag management on selected photos:
   - add tags
   - edit existing tags
@@ -112,6 +122,18 @@ dotnet clean .\src\PhotoSortingApp.App\PhotoSortingApp.App.csproj
 dotnet run --project .\src\PhotoSortingApp.App\PhotoSortingApp.App.csproj
 ```
 
+## Smart Rename AI Configuration (Optional)
+
+Set these environment variables before launching the app to enable vision-based smart rename and identity detection:
+
+```powershell
+$env:OPENAI_API_KEY="your_api_key"
+$env:OPENAI_MODEL="gpt-4o-mini"          # optional, default: gpt-4o-mini
+$env:OPENAI_BASE_URL="https://api.openai.com/v1"  # optional
+```
+
+If `OPENAI_API_KEY` is not set, the app uses local heuristics for rename suggestions and people/animal ID detection.
+
 ## Database and Migrations
 
 Install local EF CLI tool once:
@@ -141,7 +163,7 @@ dotnet publish src/PhotoSortingApp.App/PhotoSortingApp.App.csproj -c Release -r 
 
 ## Versioning and Public GitHub Releases
 
-- Current release version: `1.1.0`
+- Current release version: `1.2.0`
 - Release history and iteration notes: [`CHANGELOG.md`](./CHANGELOG.md)
 - Build version metadata source: `Directory.Build.props`
 
@@ -150,16 +172,17 @@ Current release iteration history:
 - `v1.0.0` (2026-02-25): Initial public release.
 - `v1.0.1` (2026-02-26): Added centralized version metadata and public release iteration tracking.
 - `v1.1.0` (2026-02-27): Added rename assistant, persistent tag management, direct move/copy/duplicate/repair actions, and in-session undo history.
+- `v1.2.0` (2026-02-27): Added gallery multi-select, AI-assisted smart rename batching, person/animal identity scan storage+search, and tile wrapping improvements.
 
 Tag and publish a new GitHub release iteration:
 
 ```powershell
-git tag v1.1.0
+git tag v1.2.0
 git push origin main
-git push origin v1.1.0
+git push origin v1.2.0
 ```
 
-Then create a GitHub Release from the `v1.1.0` tag and copy the matching section from `CHANGELOG.md` into the release notes.
+Then create a GitHub Release from the `v1.2.0` tag and copy the matching section from `CHANGELOG.md` into the release notes.
 
 ## AI Extension Points (v1 Stubs)
 
