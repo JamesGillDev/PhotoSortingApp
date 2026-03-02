@@ -158,10 +158,18 @@
                             </Border>
 
                             <ToggleButton Background="Transparent"
+                                          BorderBrush="Transparent"
                                           BorderThickness="0"
                                           Focusable="False"
                                           ClickMode="Press"
-                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" />
+                                          OverridesDefaultStyle="True"
+                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="{x:Type ToggleButton}">
+                                        <Border Background="Transparent" />
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
 
                             <Popup x:Name="PART_Popup"
                                    Placement="Bottom"
