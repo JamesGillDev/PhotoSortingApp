@@ -24,6 +24,12 @@ public class PhotoQueryFilter
 
     public string? AlbumKey { get; set; }
 
+    public bool IncludeImages { get; set; } = true;
+
+    public bool IncludeVideos { get; set; } = true;
+
+    public bool ExcludeSystemFolders { get; set; }
+
     public PhotoSortOption SortBy { get; set; } = PhotoSortOption.DateTakenNewest;
 
     public int Page { get; set; } = 1;

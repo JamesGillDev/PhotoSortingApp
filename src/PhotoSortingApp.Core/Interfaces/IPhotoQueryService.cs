@@ -8,7 +8,13 @@ public interface IPhotoQueryService
 
     Task<PhotoAsset?> GetPhotoByIdAsync(int photoId, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<SmartAlbumItem>> GetSmartAlbumsAsync(int? scanRootId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SmartAlbumItem>> GetSmartAlbumsAsync(
+        int? scanRootId,
+        bool excludeSystemFolders = false,
+        CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<string>> GetFolderSubpathsAsync(int scanRootId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> GetFolderSubpathsAsync(
+        int scanRootId,
+        bool excludeSystemFolders = false,
+        CancellationToken cancellationToken = default);
 }

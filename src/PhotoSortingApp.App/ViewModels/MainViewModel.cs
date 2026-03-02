@@ -54,6 +54,7 @@ public class MainViewModel : ObservableObject
     private CancellationTokenSource? _analysisCts;
     private bool _isReady;
     private bool _suppressDuplicateUpdate;
+    private bool _suppressAutoPhotoReload;
     private bool _isLoadingPhotos;
     private bool _isApplyingSmartActions;
     private int _nextPage = 1;
@@ -94,6 +95,9 @@ public class MainViewModel : ObservableObject
     private string _indexingStatus = string.Empty;
     private string _planSummary = "No organizer plan generated yet.";
     private bool _isIndexing;
+    private bool _excludeSystemMedia = true;
+    private bool _includeImages = true;
+    private bool _includeVideos = true;
     private bool _enableDuplicateDetection;
     private bool _hasMoreResults;
     private int _totalResults;
@@ -293,7 +297,7 @@ public class MainViewModel : ObservableObject
                 return;
             }
 
-            if (_isReady)
+            if (_isReady && !_suppressAutoPhotoReload)
             {
                 _ = LoadPhotosAsync(reset: true);
             }
@@ -303,7 +307,18 @@ public class MainViewModel : ObservableObject
     public FolderFilterItemViewModel? SelectedFolderFilter
     {
         get => _selectedFolderFilter;
-        set => SetProperty(ref _selectedFolderFilter, value);
+        set
+        {
+            if (!SetProperty(ref _selectedFolderFilter, value))
+            {
+                return;
+            }
+
+            if (_isReady && SelectedScanRoot is not null && !_suppressAutoPhotoReload)
+            {
+                _ = LoadPhotosAsync(reset: true);
+            }
+        }
     }
 
     public DateSourceOptionViewModel? SelectedDateSource
@@ -617,6 +632,58 @@ public class MainViewModel : ObservableObject
             }
 
             RaiseCommandCanExecute();
+        }
+    }
+
+    public bool ExcludeSystemMedia
+    {
+        get => _excludeSystemMedia;
+        set
+        {
+            if (!SetProperty(ref _excludeSystemMedia, value))
+            {
+                return;
+            }
+
+            if (_isReady && SelectedScanRoot is not null)
+            {
+                _ = RefreshFiltersAndAlbumsAsync();
+                _ = LoadPhotosAsync(reset: true);
+            }
+        }
+    }
+
+    public bool IncludeImages
+    {
+        get => _includeImages;
+        set
+        {
+            if (!SetProperty(ref _includeImages, value))
+            {
+                return;
+            }
+
+            if (_isReady && SelectedScanRoot is not null)
+            {
+                _ = LoadPhotosAsync(reset: true);
+            }
+        }
+    }
+
+    public bool IncludeVideos
+    {
+        get => _includeVideos;
+        set
+        {
+            if (!SetProperty(ref _includeVideos, value))
+            {
+                return;
+            }
+
+            if (_isReady && SelectedScanRoot is not null)
+            {
+                _ = LoadPhotosAsync(reset: true);
+            }
         }
     }
 
@@ -994,12 +1061,20 @@ public class MainViewModel : ObservableObject
             });
 
             var result = await _services.ScanService
-                .ScanAsync(SelectedScanRoot.Id, progress, _scanCts.Token)
+                .ScanAsync(
+                    SelectedScanRoot.Id,
+                    progress,
+                    _scanCts.Token,
+                    ExcludeSystemMedia
+                        ? ScanOptions.WholeComputerSafeDefaults
+                        : new ScanOptions())
                 .ConfigureAwait(true);
 
             IndexingPercent = 100;
             StatusMessage =
-                $"Scan complete. Found {result.FilesFound}, indexed {result.FilesIndexed}, updated {result.FilesUpdated}, removed {result.FilesRemoved}.";
+                ExcludeSystemMedia
+                    ? $"Scan complete (system/app folders excluded). Found {result.FilesFound}, indexed {result.FilesIndexed}, updated {result.FilesUpdated}, removed {result.FilesRemoved}."
+                    : $"Scan complete. Found {result.FilesFound}, indexed {result.FilesIndexed}, updated {result.FilesUpdated}, removed {result.FilesRemoved}.";
 
             await RefreshScanRootsAsync().ConfigureAwait(true);
             if (SelectedScanRoot is not null)
@@ -1039,7 +1114,7 @@ public class MainViewModel : ObservableObject
         }
 
         var albumData = await _services.PhotoQueryService
-            .GetSmartAlbumsAsync(SelectedScanRoot.Id)
+            .GetSmartAlbumsAsync(SelectedScanRoot.Id, ExcludeSystemMedia)
             .ConfigureAwait(true);
         SmartAlbums.Clear();
         foreach (var album in albumData)
@@ -1052,11 +1127,9 @@ public class MainViewModel : ObservableObject
             });
         }
 
-        SelectedAlbum = SmartAlbums.FirstOrDefault(x => x.Key.StartsWith("year:", StringComparison.OrdinalIgnoreCase))
-            ?? SmartAlbums.FirstOrDefault(x => x.Key == "all")
-            ?? SmartAlbums.FirstOrDefault();
-
-        var folders = await _services.PhotoQueryService.GetFolderSubpathsAsync(SelectedScanRoot.Id).ConfigureAwait(true);
+        var folders = await _services.PhotoQueryService
+            .GetFolderSubpathsAsync(SelectedScanRoot.Id, ExcludeSystemMedia)
+            .ConfigureAwait(true);
         FolderFilters.Clear();
         FolderFilters.Add(new FolderFilterItemViewModel { DisplayName = "All Folders", Value = string.Empty });
         foreach (var folder in folders)
@@ -1068,7 +1141,19 @@ public class MainViewModel : ObservableObject
             });
         }
 
-        SelectedFolderFilter = FolderFilters.FirstOrDefault();
+        _suppressAutoPhotoReload = true;
+        try
+        {
+            SelectedAlbum = SmartAlbums.FirstOrDefault(x => x.Key.StartsWith("year:", StringComparison.OrdinalIgnoreCase))
+                ?? SmartAlbums.FirstOrDefault(x => x.Key == "all")
+                ?? SmartAlbums.FirstOrDefault();
+            SelectedFolderFilter = FolderFilters.FirstOrDefault();
+        }
+        finally
+        {
+            _suppressAutoPhotoReload = false;
+        }
+
         await RefreshDuplicatesAsync().ConfigureAwait(true);
     }
 
@@ -1140,8 +1225,8 @@ public class MainViewModel : ObservableObject
             RaisePropertyChanged(nameof(ResultsSummary));
 
             StatusMessage = TotalResults == 0
-                ? "No photos matched the current filters."
-                : $"Loaded {_loadedCount} of {TotalResults} photos.";
+                ? "No media matched the current filters."
+                : $"Loaded {_loadedCount} of {TotalResults} media items.";
 
             _thumbnailCts?.Cancel();
             _thumbnailCts?.Dispose();
@@ -1185,6 +1270,9 @@ public class MainViewModel : ObservableObject
             DateSource = SelectedDateSource?.Value,
             FolderSubpath = string.IsNullOrWhiteSpace(SelectedFolderFilter?.Value) ? null : SelectedFolderFilter!.Value,
             AlbumKey = albumKey,
+            IncludeImages = IncludeImages,
+            IncludeVideos = IncludeVideos,
+            ExcludeSystemFolders = ExcludeSystemMedia,
             SortBy = SelectedSortOption?.Value ?? PhotoSortOption.DateTakenNewest,
             Page = page,
             PageSize = PageSize
@@ -2982,18 +3070,29 @@ public class MainViewModel : ObservableObject
 
     private async Task ClearFiltersAsync()
     {
-        SearchText = string.Empty;
-        PersonSearchText = string.Empty;
-        AnimalSearchText = string.Empty;
-        LocationSearchText = string.Empty;
-        FromDateLocal = null;
-        ToDateLocal = null;
-        SelectedDateSource = DateSourceOptions[0];
-        SelectedFolderFilter = FolderFilters.FirstOrDefault();
-        SelectedDuplicateGroup = null;
-        SelectedAlbum = SmartAlbums.FirstOrDefault(x => x.Key.StartsWith("year:", StringComparison.OrdinalIgnoreCase))
-            ?? SmartAlbums.FirstOrDefault(x => x.Key == "all")
-            ?? SmartAlbums.FirstOrDefault();
+        _suppressAutoPhotoReload = true;
+        try
+        {
+            SearchText = string.Empty;
+            PersonSearchText = string.Empty;
+            AnimalSearchText = string.Empty;
+            LocationSearchText = string.Empty;
+            IncludeImages = true;
+            IncludeVideos = true;
+            FromDateLocal = null;
+            ToDateLocal = null;
+            SelectedDateSource = DateSourceOptions[0];
+            SelectedFolderFilter = FolderFilters.FirstOrDefault();
+            SelectedDuplicateGroup = null;
+            SelectedAlbum = SmartAlbums.FirstOrDefault(x => x.Key.StartsWith("year:", StringComparison.OrdinalIgnoreCase))
+                ?? SmartAlbums.FirstOrDefault(x => x.Key == "all")
+                ?? SmartAlbums.FirstOrDefault();
+        }
+        finally
+        {
+            _suppressAutoPhotoReload = false;
+        }
+
         await LoadPhotosAsync(reset: true).ConfigureAwait(true);
     }
 

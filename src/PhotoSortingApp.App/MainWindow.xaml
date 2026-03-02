@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
+        x:Name="RootWindow"
         Title="PhotoSortingApp"
         Icon="/PhotoSortingApp.App;component/Assets/PhotoSortingApp.ico"
         Height="960"
@@ -15,6 +16,23 @@
         <CollectionViewSource x:Key="YearAlbumsView"
                               Source="{Binding SmartAlbums}"
                               Filter="YearAlbumsFilter" />
+        <ContextMenu x:Key="PhotoItemContextMenu">
+            <MenuItem Header="Open File"
+                      Click="OnContextOpenFileClick" />
+            <MenuItem Header="Open File Location"
+                      Click="OnContextOpenFileLocationClick" />
+            <Separator />
+            <MenuItem Header="Save Media IDs"
+                      Click="OnContextSaveMediaClick" />
+            <MenuItem Header="Move"
+                      Click="OnContextMoveClick" />
+            <MenuItem Header="Copy"
+                      Click="OnContextCopyClick" />
+            <MenuItem Header="Duplicate"
+                      Click="OnContextDuplicateClick" />
+            <MenuItem Header="Fix Location"
+                      Click="OnContextFixLocationClick" />
+        </ContextMenu>
     </Window.Resources>
 
     <Grid Background="{DynamicResource AppBackgroundBrush}">
@@ -34,6 +52,7 @@
                 CornerRadius="8">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -70,7 +89,12 @@
                               SelectedItem="{Binding SelectedScanRoot}" />
                 </Grid>
 
-                <WrapPanel Grid.Row="2"
+                <CheckBox Grid.Row="2"
+                          Margin="0,0,0,10"
+                          IsChecked="{Binding ExcludeSystemMedia, Mode=TwoWay}"
+                          Content="Exclude system/app media during scan and browsing (recommended)" />
+
+                <WrapPanel Grid.Row="3"
                            Margin="0,0,0,8"
                            VerticalAlignment="Center">
                     <Button Margin="0,0,8,8"
@@ -96,7 +120,7 @@
                             Content="Cancel Scan" />
                 </WrapPanel>
 
-                <WrapPanel Grid.Row="3"
+                <WrapPanel Grid.Row="4"
                            VerticalAlignment="Center">
                     <StackPanel Width="250"
                                 Margin="0,0,12,8">
@@ -326,6 +350,14 @@
                         <StackPanel Orientation="Horizontal"
                                     DockPanel.Dock="Right"
                                     VerticalAlignment="Center">
+                            <CheckBox Margin="0,0,12,0"
+                                      VerticalAlignment="Center"
+                                      IsChecked="{Binding IncludeImages, Mode=TwoWay}"
+                                      Content="Images" />
+                            <CheckBox Margin="0,0,12,0"
+                                      VerticalAlignment="Center"
+                                      IsChecked="{Binding IncludeVideos, Mode=TwoWay}"
+                                      Content="Videos" />
                             <TextBlock Margin="0,0,6,0"
                                        VerticalAlignment="Center"
                                        FontWeight="SemiBold"
@@ -362,6 +394,7 @@
                                  SelectedItem="{Binding SelectedPhoto}"
                                  SelectionMode="Extended"
                                   SelectionChanged="PhotoList_SelectionChanged"
+                                 PreviewMouseRightButtonDown="PhotoList_PreviewMouseRightButtonDown"
                                  MouseDoubleClick="PhotoList_MouseDoubleClick"
                                  Visibility="{Binding IsTileLayout, Converter={StaticResource BoolToVisibilityConverter}}"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -379,6 +412,7 @@
                                             Height="190"
                                             Margin="6"
                                             Padding="6"
+                                            ContextMenu="{StaticResource PhotoItemContextMenu}"
                                             Background="{DynamicResource TileBackgroundBrush}"
                                             BorderBrush="{DynamicResource TileBorderBrush}"
                                             BorderThickness="1"
@@ -414,12 +448,14 @@
                                  SelectedItem="{Binding SelectedPhoto}"
                                  SelectionMode="Extended"
                                  SelectionChanged="PhotoList_SelectionChanged"
+                                 PreviewMouseRightButtonDown="PhotoList_PreviewMouseRightButtonDown"
                                  MouseDoubleClick="PhotoList_MouseDoubleClick"
                                  Visibility="{Binding IsTileLayout, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Border Margin="0,0,0,6"
                                             Padding="8"
+                                            ContextMenu="{StaticResource PhotoItemContextMenu}"
                                             Background="{DynamicResource TileBackgroundBrush}"
                                             BorderBrush="{DynamicResource TileBorderBrush}"
                                             BorderThickness="1"

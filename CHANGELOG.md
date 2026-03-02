@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.5.1] - 2026-03-02
+
+### Added
+- Right-click media context menu in both gallery layouts with quick actions:
+  - `Open File`
+  - `Open File Location`
+  - `Save Media IDs`
+  - `Move`, `Copy`, `Duplicate`
+  - `Fix Location`
+- New media-type toggles (`Images`, `Videos`) beside `Sort` for faster gallery filtering.
+- `Exclude system/app media` checkbox under `Root Folder` to reduce noisy scan/query results from OS and tool folders.
+
+### Changed
+- Scan and browse pipelines now honor system-folder exclusion consistently in albums, folder filters, and search results.
+- Status and filter text now consistently refer to `media` when both photos and videos are in scope.
+
+### Fixed
+- `Folder Filter` selection now immediately reloads results and no longer appears unresponsive.
+- Reduced duplicate auto-reload calls during filter resets/refreshes to prevent UI lock-up behavior.
+
 ## [1.5.0] - 2026-03-02
 
 ### Added

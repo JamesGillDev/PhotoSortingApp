@@ -3,7 +3,7 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/UI-WPF-512BD4)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![EF%20Core](https://img.shields.io/badge/EF%20Core-8.0-5C2D91)](https://learn.microsoft.com/ef/core/)
-[![Version](https://img.shields.io/badge/Version-1.5.0-brightgreen)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.5.1-brightgreen)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-BLS%201.1-blue.svg)](./LICENSE.md)
 
 PhotoSortingApp is a local-first Windows desktop media catalog and safe organizer planner.
@@ -42,6 +42,9 @@ It is designed for large unsorted libraries (10,000+ photos/videos), with increm
   - date indexed
   - file size
   - file name
+- Quick media-type toggles beside `Sort`:
+  - Images
+  - Videos
 - Theme options:
   - System (matches Windows app theme)
   - Light
@@ -55,6 +58,7 @@ It is designed for large unsorted libraries (10,000+ photos/videos), with increm
   - person ID search
   - animal ID search
   - location ID search
+  - exclude system/app media toggle for cleaner scan/query results
 - Smart Albums:
   - All Media
   - Videos
@@ -89,6 +93,10 @@ It is designed for large unsorted libraries (10,000+ photos/videos), with increm
   - edit existing tags
   - remove tags
 - Streamlined selected-photo file actions:
+  - right-click media context menu in gallery items
+  - open file
+  - open file location
+  - save media IDs
   - move
   - copy
   - duplicate
@@ -207,7 +215,7 @@ dotnet publish src/PhotoSortingApp.App/PhotoSortingApp.App.csproj -c Release -r 
 
 ## Versioning and Public GitHub Releases
 
-- Current release version: `1.5.0`
+- Current release version: `1.5.1`
 - Release history and iteration notes: [`CHANGELOG.md`](./CHANGELOG.md)
 - Build version metadata source: `Directory.Build.props`
 
@@ -221,16 +229,17 @@ Current release iteration history:
 - `v1.3.1` (2026-02-27): Added explicit Save Image and double-click open actions, fixed top-bar clipping, and fixed Windows file-metadata persistence for identity/tag updates.
 - `v1.4.0` (2026-02-27): Added startup quick-start popup, fixed published EXE icon startup issue, improved portrait fallback detection, auto-applied scan context tags, and strengthened case-insensitive tokenized search.
 - `v1.5.0` (2026-03-02): Added video indexing support, year-first browsing and organizer targeting, location IDs, and overall UI/UX layout cleanup.
+- `v1.5.1` (2026-03-02): Added gallery right-click context actions (including Open File Location), added Images/Videos and system-media exclusion toggles, and fixed folder filter reload lock-up behavior.
 
 Tag and publish a new GitHub release iteration:
 
 ```powershell
-git tag v1.5.0
+git tag v1.5.1
 git push origin main
-git push origin v1.5.0
+git push origin v1.5.1
 ```
 
-Then create a GitHub Release from the matching tag (for example `v1.5.0`) and copy the matching section from `CHANGELOG.md` into the release notes.
+Then create a GitHub Release from the matching tag (for example `v1.5.1`) and copy the matching section from `CHANGELOG.md` into the release notes.
 
 ## AI Extension Points (v1 Stubs)
 

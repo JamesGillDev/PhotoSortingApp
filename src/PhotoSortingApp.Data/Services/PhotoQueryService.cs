@@ -13,6 +13,9 @@ public class PhotoQueryService : IPhotoQueryService
     private const string DuplicatePrefix = "dup:";
     private const string NoCaseCollation = "NOCASE";
     private const string LikeEscape = "\\";
+    private static readonly string[] ImageExtensions = SupportedPhotoExtensions.Images
+        .Select(x => x.ToLowerInvariant())
+        .ToArray();
     private static readonly string[] VideoExtensions = SupportedPhotoExtensions.Videos
         .Select(x => x.ToLowerInvariant())
         .ToArray();
@@ -32,6 +35,27 @@ public class PhotoQueryService : IPhotoQueryService
         if (filter.ScanRootId.HasValue)
         {
             query = query.Where(x => x.ScanRootId == filter.ScanRootId.Value);
+        }
+
+        if (filter.ExcludeSystemFolders)
+        {
+            query = ApplySystemPathExclusion(query);
+        }
+
+        if (!filter.IncludeImages || !filter.IncludeVideos)
+        {
+            if (filter.IncludeImages && !filter.IncludeVideos)
+            {
+                query = query.Where(x => ImageExtensions.Contains(x.Extension));
+            }
+            else if (!filter.IncludeImages && filter.IncludeVideos)
+            {
+                query = query.Where(x => VideoExtensions.Contains(x.Extension));
+            }
+            else
+            {
+                query = query.Where(_ => false);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(filter.SearchText))
@@ -145,7 +169,10 @@ public class PhotoQueryService : IPhotoQueryService
             .ConfigureAwait(false);
     }
 
-    public async Task<IReadOnlyList<SmartAlbumItem>> GetSmartAlbumsAsync(int? scanRootId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SmartAlbumItem>> GetSmartAlbumsAsync(
+        int? scanRootId,
+        bool excludeSystemFolders = false,
+        CancellationToken cancellationToken = default)
     {
         using var db = _contextFactory();
         var baseQuery = db.PhotoAssets.AsNoTracking().AsQueryable();
@@ -153,6 +180,11 @@ public class PhotoQueryService : IPhotoQueryService
         if (scanRootId.HasValue)
         {
             baseQuery = baseQuery.Where(x => x.ScanRootId == scanRootId.Value);
+        }
+
+        if (excludeSystemFolders)
+        {
+            baseQuery = ApplySystemPathExclusion(baseQuery);
         }
 
         var albums = new List<SmartAlbumItem>();
@@ -225,15 +257,25 @@ public class PhotoQueryService : IPhotoQueryService
         return albums;
     }
 
-    public async Task<IReadOnlyList<string>> GetFolderSubpathsAsync(int scanRootId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> GetFolderSubpathsAsync(
+        int scanRootId,
+        bool excludeSystemFolders = false,
+        CancellationToken cancellationToken = default)
     {
         using var db = _contextFactory();
         var root = await db.ScanRoots.AsNoTracking()
             .SingleAsync(x => x.Id == scanRootId, cancellationToken)
             .ConfigureAwait(false);
 
-        var folders = await db.PhotoAssets.AsNoTracking()
-            .Where(x => x.ScanRootId == scanRootId)
+        var foldersQuery = db.PhotoAssets.AsNoTracking()
+            .Where(x => x.ScanRootId == scanRootId);
+
+        if (excludeSystemFolders)
+        {
+            foldersQuery = ApplySystemPathExclusion(foldersQuery);
+        }
+
+        var folders = await foldersQuery
             .Select(x => x.FolderPath)
             .Distinct()
             .ToListAsync(cancellationToken)
@@ -392,5 +434,20 @@ public class PhotoQueryService : IPhotoQueryService
                 .ThenByDescending(x => x.IndexedUtc)
                 .ThenBy(x => x.FileName)
         };
+    }
+
+    private static IQueryable<PhotoAsset> ApplySystemPathExclusion(IQueryable<PhotoAsset> query)
+    {
+        return query.Where(x =>
+            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\Windows\\%") &&
+            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\Windows") &&
+            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\Program Files\\%") &&
+            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\Program Files (x86)\\%") &&
+            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\ProgramData\\%") &&
+            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\AppData\\%") &&
+            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\$Recycle.Bin\\%") &&
+            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\System Volume Information\\%") &&
+            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\.git\\%") &&
+            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\node_modules\\%"));
     }
 }
