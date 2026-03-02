@@ -1144,8 +1144,8 @@ public class MainViewModel : ObservableObject
         _suppressAutoPhotoReload = true;
         try
         {
-            SelectedAlbum = SmartAlbums.FirstOrDefault(x => x.Key.StartsWith("year:", StringComparison.OrdinalIgnoreCase))
-                ?? SmartAlbums.FirstOrDefault(x => x.Key == "all")
+            SelectedAlbum = SmartAlbums.FirstOrDefault(x => x.Key == "all")
+                ?? SmartAlbums.FirstOrDefault(x => x.Key.StartsWith("year:", StringComparison.OrdinalIgnoreCase))
                 ?? SmartAlbums.FirstOrDefault();
             SelectedFolderFilter = FolderFilters.FirstOrDefault();
         }
@@ -3084,8 +3084,8 @@ public class MainViewModel : ObservableObject
             SelectedDateSource = DateSourceOptions[0];
             SelectedFolderFilter = FolderFilters.FirstOrDefault();
             SelectedDuplicateGroup = null;
-            SelectedAlbum = SmartAlbums.FirstOrDefault(x => x.Key.StartsWith("year:", StringComparison.OrdinalIgnoreCase))
-                ?? SmartAlbums.FirstOrDefault(x => x.Key == "all")
+            SelectedAlbum = SmartAlbums.FirstOrDefault(x => x.Key == "all")
+                ?? SmartAlbums.FirstOrDefault(x => x.Key.StartsWith("year:", StringComparison.OrdinalIgnoreCase))
                 ?? SmartAlbums.FirstOrDefault();
         }
         finally
