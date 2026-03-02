@@ -13,6 +13,59 @@ public class PhotoQueryService : IPhotoQueryService
     private const string DuplicatePrefix = "dup:";
     private const string NoCaseCollation = "NOCASE";
     private const string LikeEscape = "\\";
+    private static readonly string[] ExcludedFolderLikePatterns =
+    {
+        "%\\Windows\\%",
+        "%\\Windows",
+        "%\\Program Files\\%",
+        "%\\Program Files (x86)\\%",
+        "%\\ProgramData\\%",
+        "%\\AppData\\%",
+        "%\\$Recycle.Bin\\%",
+        "%\\System Volume Information\\%",
+        "%\\.git\\%",
+        "%\\.git",
+        "%\\.nuget\\%",
+        "%\\.nuget",
+        "%\\.vs\\%",
+        "%\\.vs",
+        "%\\.vscode\\%",
+        "%\\.vscode",
+        "%\\node_modules\\%",
+        "%\\node_modules",
+        "%\\bin\\%",
+        "%\\bin",
+        "%\\obj\\%",
+        "%\\obj",
+        "%\\publish\\%",
+        "%\\publish",
+        "%\\artifacts\\%",
+        "%\\artifacts",
+        "%\\packages\\%",
+        "%\\packages",
+        "%\\packagecache\\%",
+        "%\\packagecache",
+        "%\\bower_components\\%",
+        "%\\bower_components",
+        "%\\venv\\%",
+        "%\\venv",
+        "%\\.venv\\%",
+        "%\\.venv",
+        "%\\__pycache__\\%",
+        "%\\__pycache__"
+    };
+    private static readonly string[] GeneratedAssetNameLikePatterns =
+    {
+        "%appicon%",
+        "%favicon%",
+        "%targetsize%",
+        "%.scale-%",
+        "%storelogo%",
+        "%splashscreen%",
+        "%square44x44%",
+        "%square150x150%",
+        "%windowsappruntime%"
+    };
     private static readonly string[] ImageExtensions = SupportedPhotoExtensions.Images
         .Select(x => x.ToLowerInvariant())
         .ToArray();
@@ -438,16 +491,26 @@ public class PhotoQueryService : IPhotoQueryService
 
     private static IQueryable<PhotoAsset> ApplySystemPathExclusion(IQueryable<PhotoAsset> query)
     {
-        return query.Where(x =>
-            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\Windows\\%") &&
-            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\Windows") &&
-            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\Program Files\\%") &&
-            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\Program Files (x86)\\%") &&
-            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\ProgramData\\%") &&
-            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\AppData\\%") &&
-            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\$Recycle.Bin\\%") &&
-            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\System Volume Information\\%") &&
-            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\.git\\%") &&
-            !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), "%\\node_modules\\%"));
+        foreach (var folderPattern in ExcludedFolderLikePatterns)
+        {
+            var localPattern = folderPattern;
+            query = query.Where(x =>
+                !EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), localPattern));
+        }
+
+        foreach (var fileNamePattern in GeneratedAssetNameLikePatterns)
+        {
+            var localPattern = fileNamePattern;
+            query = query.Where(x =>
+                !(ImageExtensions.Contains(x.Extension) &&
+                  x.Width.HasValue &&
+                  x.Height.HasValue &&
+                  x.Width.Value <= 512 &&
+                  x.Height.Value <= 512 &&
+                  x.FileSizeBytes <= 1_500_000 &&
+                  EF.Functions.Like(EF.Functions.Collate(x.FileName, NoCaseCollation), localPattern)));
+        }
+
+        return query;
     }
 }

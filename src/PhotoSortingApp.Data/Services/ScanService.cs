@@ -25,10 +25,23 @@ public class ScanService : IScanService
 
     private static readonly HashSet<string> ExcludedSegmentNames = new(StringComparer.OrdinalIgnoreCase)
     {
+        ".vs",
+        ".vscode",
+        ".idea",
         ".git",
         ".nuget",
+        ".venv",
+        "__pycache__",
         "AppData",
-        "node_modules"
+        "node_modules",
+        "bin",
+        "obj",
+        "publish",
+        "artifacts",
+        "packages",
+        "packagecache",
+        "bower_components",
+        "venv"
     };
 
     private readonly Func<PhotoCatalogDbContext> _contextFactory;

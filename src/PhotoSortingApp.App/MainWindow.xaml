@@ -16,7 +16,30 @@
         <CollectionViewSource x:Key="YearAlbumsView"
                               Source="{Binding SmartAlbums}"
                               Filter="YearAlbumsFilter" />
-        <ContextMenu x:Key="PhotoItemContextMenu">
+        <ContextMenu x:Key="PhotoItemContextMenu"
+                     Background="{DynamicResource ControlPopupBackgroundBrush}"
+                     BorderBrush="{DynamicResource ControlPopupBorderBrush}"
+                     Foreground="{DynamicResource ControlForegroundBrush}">
+            <ContextMenu.Resources>
+                <Style TargetType="{x:Type MenuItem}">
+                    <Setter Property="Background" Value="{DynamicResource ControlPopupBackgroundBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+                    <Setter Property="Padding" Value="12,6" />
+                    <Style.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource ControlSelectionBackgroundBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource ControlSelectionForegroundBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource DisabledForegroundBrush}" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+                <Style TargetType="{x:Type Separator}">
+                    <Setter Property="Background" Value="{DynamicResource ControlBorderBrush}" />
+                    <Setter Property="Margin" Value="4,3" />
+                </Style>
+            </ContextMenu.Resources>
             <MenuItem Header="Open File"
                       Click="OnContextOpenFileClick" />
             <MenuItem Header="Open File Location"
