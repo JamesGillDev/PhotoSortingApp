@@ -3,7 +3,7 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/UI-WPF-512BD4)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![EF%20Core](https://img.shields.io/badge/EF%20Core-8.0-5C2D91)](https://learn.microsoft.com/ef/core/)
-[![Version](https://img.shields.io/badge/Version-1.5.1-brightgreen)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.5.2-brightgreen)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-BLS%201.1-blue.svg)](./LICENSE.md)
 
 PhotoSortingApp is a local-first Windows desktop media catalog and safe organizer planner.
@@ -31,6 +31,7 @@ It is designed for large unsorted libraries (10,000+ photos/videos), with increm
 - `Scan This PC` option:
   - scans fixed local drives in safe mode
   - excludes likely system/program locations (`Windows`, `Program Files`, `ProgramData`, `AppData`, etc.) to reduce non-user image noise
+  - excludes common dev/build/cache/web-asset paths to reduce icons/thumbnails/background art noise on different PCs
 - Gallery with thumbnail cache (`App_Data/ThumbCache`)
 - Gallery layout options:
   - Tiles (default)
@@ -215,9 +216,12 @@ dotnet publish src/PhotoSortingApp.App/PhotoSortingApp.App.csproj -c Release -r 
 
 ## Versioning and Public GitHub Releases
 
-- Current release version: `1.5.1`
+- Current release version: `1.5.2`
 - Release history and iteration notes: [`CHANGELOG.md`](./CHANGELOG.md)
 - Build version metadata source: `Directory.Build.props`
+
+Public release readiness:
+- `v1.5.2` is validated and ready for public release.
 
 Current release iteration history:
 
@@ -230,16 +234,17 @@ Current release iteration history:
 - `v1.4.0` (2026-02-27): Added startup quick-start popup, fixed published EXE icon startup issue, improved portrait fallback detection, auto-applied scan context tags, and strengthened case-insensitive tokenized search.
 - `v1.5.0` (2026-03-02): Added video indexing support, year-first browsing and organizer targeting, location IDs, and overall UI/UX layout cleanup.
 - `v1.5.1` (2026-03-02): Added gallery right-click context actions (including Open File Location), added Images/Videos and system-media exclusion toggles, and fixed folder filter reload lock-up behavior.
+- `v1.5.2` (2026-03-02): Tightened cross-PC noise exclusions (system/cache/web assets), fixed dropdown hover color behavior, aligned top filter control sizing, fixed title/subtitle spacing, and defaulted refresh/clear to `All Media`.
 
 Tag and publish a new GitHub release iteration:
 
 ```powershell
-git tag v1.5.1
+git tag v1.5.2
 git push origin main
-git push origin v1.5.1
+git push origin v1.5.2
 ```
 
-Then create a GitHub Release from the matching tag (for example `v1.5.1`) and copy the matching section from `CHANGELOG.md` into the release notes.
+Then create a GitHub Release from the matching tag (for example `v1.5.2`) and copy the matching section from `CHANGELOG.md` into the release notes.
 
 ## AI Extension Points (v1 Stubs)
 

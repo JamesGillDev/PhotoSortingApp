@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.5.2] - 2026-03-02
+
+### Added
+- Stronger cross-PC media noise exclusion heuristics for scan and browse pipelines:
+  - dot-prefixed directories (for example `.codex`, `.cache`)
+  - common dev/build/cache folders (`bin`, `obj`, `publish`, `artifacts`, `node_modules`, cache/thumbnail folders)
+  - likely web project folders (`wwwroot`, `website`, `web site`) and common generated web-asset name patterns
+
+### Changed
+- Default album selection after refresh and clear now uses `All Media` instead of auto-selecting a year, reducing accidental hidden results.
+- Top filter controls (`Search`, `Person ID`, `Animal ID`, `Location ID`, `Theme`) were normalized to consistent widths for cleaner layout.
+
+### Fixed
+- Fixed combo/dropdown hover color overlay causing bright system highlight flashes in dark theme.
+- Fixed top header spacing so `Photo Workspace` and subtitle text are visually separated.
+- Improved context-menu theming consistency and readability.
+
+### Release Readiness
+- `v1.5.2` is validated, published locally, and marked ready for public GitHub release.
+
 ## [1.5.1] - 2026-03-02
 
 ### Added
