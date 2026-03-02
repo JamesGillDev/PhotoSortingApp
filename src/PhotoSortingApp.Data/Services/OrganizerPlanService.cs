@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using PhotoSortingApp.Core.Infrastructure;
 using PhotoSortingApp.Core.Interfaces;
+using PhotoSortingApp.Domain.Enums;
 using PhotoSortingApp.Domain.Models;
 
 namespace PhotoSortingApp.Data.Services;
@@ -32,6 +33,13 @@ public class OrganizerPlanService : IOrganizerPlanService
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        if (request.TargetYear.HasValue)
+        {
+            photos = photos
+                .Where(x => (x.DateTaken ?? x.FileLastWriteUtc).ToLocalTime().Year == request.TargetYear.Value)
+                .ToList();
+        }
+
         var occupiedTargets = new HashSet<string>(photos.Select(x => x.FullPath), StringComparer.OrdinalIgnoreCase);
         var planItems = new List<OrganizerPlanItem>();
 
@@ -47,7 +55,9 @@ public class OrganizerPlanService : IOrganizerPlanService
             var effectiveLocal = effectiveDateUtc.ToLocalTime();
             var yearFolder = effectiveLocal.Year.ToString("0000");
             var monthFolder = $"{effectiveLocal.Year:0000}-{effectiveLocal.Month:00}";
-            var targetDirectory = Path.Combine(root.RootPath, yearFolder, monthFolder);
+            var targetDirectory = request.RuleType == OrganizeRuleType.YearMonthFolders
+                ? Path.Combine(root.RootPath, yearFolder, monthFolder)
+                : Path.Combine(root.RootPath, yearFolder);
             var initialTarget = Path.Combine(targetDirectory, photo.FileName);
 
             if (PathsEqual(photo.FullPath, initialTarget))
@@ -64,7 +74,9 @@ public class OrganizerPlanService : IOrganizerPlanService
                 PhotoId = photo.Id,
                 SourcePath = photo.FullPath,
                 DestinationPath = resolvedTarget,
-                Reason = "Sort to Year/Month folders"
+                Reason = request.RuleType == OrganizeRuleType.YearMonthFolders
+                    ? "Sort to Year/Month folders"
+                    : "Sort to Year folders"
             });
         }
 

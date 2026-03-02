@@ -28,7 +28,7 @@
                            Text="PhotoSortingApp Quick Start" />
                 <TextBlock Margin="0,6,0,10"
                            Foreground="{DynamicResource TextSecondaryBrush}"
-                           Text="Use these steps to quickly index, tag, and find photos across large folders."
+                           Text="Use these steps to quickly index, tag, and find photos/videos across large folders."
                            TextWrapping="Wrap" />
             </StackPanel>
 
@@ -36,15 +36,17 @@
                 <TextBlock Margin="0,0,0,6"
                            Text="1. Click Select Folder, choose a root, then click Start Scan." />
                 <TextBlock Margin="0,0,0,6"
-                           Text="2. Use Search / Person ID / Animal ID filters. Search is case-insensitive." />
+                           Text="2. Use Year Folders to browse media by year, then refine with Search / Person ID / Animal ID / Location ID." />
                 <TextBlock Margin="0,0,0,6"
-                           Text="3. Select one or more photos, run Scan People / Animals, then click Save IDs or Save Image." />
+                           Text="3. Select one or more media items, run Scan People / Animals, then click Save IDs or Save Image (People/Animal/Location IDs)." />
                 <TextBlock Margin="0,0,0,6"
                            Text="4. Run Scan Environment / Event / Scene Tags to auto-assign searchable tags (example: portrait, scenery, holiday)." />
                 <TextBlock Margin="0,0,0,6"
-                           Text="5. Double-click a photo to open full size. Use Open File Location for the original file." />
+                           Text="5. Double-click a photo/video to open it. Use Open File Location for the original file." />
                 <TextBlock Margin="0,0,0,6"
                            Text="6. Use Smart Albums, Date Range, Folder Filter, and Duplicate Groups to narrow results fast." />
+                <TextBlock Margin="0,0,0,6"
+                           Text="7. Build Organizer Plan to place photos/videos into Year folders (for example: 2024, 2025)." />
                 <TextBlock Margin="0,6,0,0"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Text="Tip: For best reliability, keep manual IDs consistent (example: CeCe) and save after edits."

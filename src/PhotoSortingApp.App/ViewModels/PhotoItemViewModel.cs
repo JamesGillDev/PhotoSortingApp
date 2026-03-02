@@ -1,4 +1,5 @@
 using System.Windows.Media.Imaging;
+using PhotoSortingApp.Core.Infrastructure;
 using PhotoSortingApp.Domain.Models;
 
 namespace PhotoSortingApp.App.ViewModels;
@@ -21,6 +22,10 @@ public class PhotoItemViewModel : ObservableObject
     public string FullPath => Asset.FullPath;
 
     public string Extension => Asset.Extension;
+
+    public bool IsVideo => SupportedPhotoExtensions.IsVideo(Asset.FullPath);
+
+    public string MediaTypeText => IsVideo ? "Video" : "Photo";
 
     public string? Camera => string.IsNullOrWhiteSpace(Asset.CameraMake) && string.IsNullOrWhiteSpace(Asset.CameraModel)
         ? null

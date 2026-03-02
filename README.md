@@ -3,12 +3,12 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/UI-WPF-512BD4)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![EF%20Core](https://img.shields.io/badge/EF%20Core-8.0-5C2D91)](https://learn.microsoft.com/ef/core/)
-[![Version](https://img.shields.io/badge/Version-1.4.0-brightgreen)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.5.0-brightgreen)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-BLS%201.1-blue.svg)](./LICENSE.md)
 
-PhotoSortingApp is a local-first Windows desktop photo catalog and safe organizer planner.
+PhotoSortingApp is a local-first Windows desktop media catalog and safe organizer planner.
 
-It is designed for large unsorted libraries (10,000+ photos), with incremental indexing, metadata extraction, thumbnail caching, and read-only-first safety.
+It is designed for large unsorted libraries (10,000+ photos/videos), with incremental indexing, metadata extraction, thumbnail caching, and read-only-first safety.
 
 ## Core Principles
 
@@ -20,7 +20,9 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
 ## Features
 
 - Root folder selection + rescanning
-- Recursive indexing for `.jpg`, `.jpeg`, `.png`, `.heic`
+- Recursive indexing for photos and videos:
+  - photos: `.jpg`, `.jpeg`, `.png`, `.heic`, `.webp`, `.gif`, `.bmp`, `.tif`, `.tiff`
+  - videos: `.mp4`, `.mov`, `.m4v`, `.avi`, `.mkv`, `.wmv`, `.webm`
 - Metadata extraction:
   - EXIF `DateTimeOriginal` when available
   - fallback to file timestamps
@@ -52,13 +54,18 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
   - tokenized, case-insensitive filename / notes / tags search
   - person ID search
   - animal ID search
+  - location ID search
 - Smart Albums:
-  - All Photos
+  - All Media
+  - Videos
   - By Month
   - By Year
   - Unknown Date
   - Recently Added
   - Possible Duplicates
+- Year-first browsing:
+  - dedicated `Year Folders` list in the filter pane
+  - selecting a year lets organizer planning target that year only
 - Duplicate detection toggle (SHA-256 only when enabled)
 - Rename assistant for selected photos:
   - metadata-informed name suggestions (date/camera/folder/tags)
@@ -90,7 +97,9 @@ It is designed for large unsorted libraries (10,000+ photos), with incremental i
   - undo last change
   - undo any selected change from history dropdown
 - Dry-run organizer plan:
-  - Year/Month folder strategy
+  - Year folder strategy (default)
+  - optional Year/Month folder strategy in service rules
+  - can target only the selected year album (for example `2016`)
   - preview + operation logging
   - optional `Apply Plan` execution with confirmation
 
@@ -130,6 +139,32 @@ Troubleshooting:
 dotnet clean .\src\PhotoSortingApp.App\PhotoSortingApp.App.csproj
 dotnet run --project .\src\PhotoSortingApp.App\PhotoSortingApp.App.csproj
 ```
+
+## Publish and Run Locally (No IDE)
+
+Framework-dependent publish (requires installed .NET 8 Desktop Runtime on target machine):
+
+```powershell
+dotnet publish src/PhotoSortingApp.App/PhotoSortingApp.App.csproj -c Release -r win-x64 --self-contained false -o artifacts/publish/win-x64
+```
+
+Run:
+
+```powershell
+.\artifacts\publish\win-x64\PhotoSortingApp.App.exe
+```
+
+## Share to Another Windows Computer
+
+1. Publish the app (command above).
+2. Copy the full `artifacts/publish/win-x64` folder to the other computer.
+3. Ensure the other computer has the .NET 8 Desktop Runtime installed (if framework-dependent publish is used).
+4. Launch `PhotoSortingApp.App.exe`.
+
+Notes:
+
+- App data (catalog DB, thumbnails, organizer logs) is created under `App_Data` next to the executable.
+- For a fully standalone package, use `--self-contained true` when publishing (larger output).
 
 ## Smart Rename AI Configuration (Optional)
 
@@ -172,7 +207,7 @@ dotnet publish src/PhotoSortingApp.App/PhotoSortingApp.App.csproj -c Release -r 
 
 ## Versioning and Public GitHub Releases
 
-- Current release version: `1.4.0`
+- Current release version: `1.5.0`
 - Release history and iteration notes: [`CHANGELOG.md`](./CHANGELOG.md)
 - Build version metadata source: `Directory.Build.props`
 
@@ -185,16 +220,17 @@ Current release iteration history:
 - `v1.3.0` (2026-02-27): Added batch identity ID assignment, context category scanning tags (environment/event/holiday/scenery/artwork), standardized rename guidance, and duplicate-group header spacing fixes.
 - `v1.3.1` (2026-02-27): Added explicit Save Image and double-click open actions, fixed top-bar clipping, and fixed Windows file-metadata persistence for identity/tag updates.
 - `v1.4.0` (2026-02-27): Added startup quick-start popup, fixed published EXE icon startup issue, improved portrait fallback detection, auto-applied scan context tags, and strengthened case-insensitive tokenized search.
+- `v1.5.0` (2026-03-02): Added video indexing support, year-first browsing and organizer targeting, location IDs, and overall UI/UX layout cleanup.
 
 Tag and publish a new GitHub release iteration:
 
 ```powershell
-git tag v1.4.0
+git tag v1.5.0
 git push origin main
-git push origin v1.4.0
+git push origin v1.5.0
 ```
 
-Then create a GitHub Release from the `v1.4.0` tag and copy the matching section from `CHANGELOG.md` into the release notes.
+Then create a GitHub Release from the matching tag (for example `v1.5.0`) and copy the matching section from `CHANGELOG.md` into the release notes.
 
 ## AI Extension Points (v1 Stubs)
 
@@ -207,6 +243,7 @@ Then create a GitHub Release from the `v1.4.0` tag and copy the matching section
 
 - HEIC decoding/metadata depends on local Windows codec support.
 - Thumbnail generation uses `System.Drawing.Common` and is Windows-targeted.
+- Video preview thumbnails are currently not generated (videos are still indexed, searchable, and auto-organized by year).
 - Undo history is session-based and not persisted after app restart.
 - Notes editing UI is not yet implemented.
 

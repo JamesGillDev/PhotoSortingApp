@@ -14,6 +14,7 @@ internal static class WindowsFileMetadataWriter
         string fullPath,
         IReadOnlyList<string> peopleIds,
         IReadOnlyList<string> animalIds,
+        IReadOnlyList<string> locationIds,
         IReadOnlyList<string> tags)
     {
         if (!OperatingSystem.IsWindows() ||
@@ -26,20 +27,23 @@ internal static class WindowsFileMetadataWriter
         var title = Path.GetFileNameWithoutExtension(fullPath);
         var peopleText = peopleIds.Count == 0 ? "(none)" : string.Join(", ", peopleIds);
         var animalsText = animalIds.Count == 0 ? "(none)" : string.Join(", ", animalIds);
+        var locationsText = locationIds.Count == 0 ? "(none)" : string.Join(", ", locationIds);
         var tagText = tags.Count == 0 ? "(none)" : string.Join(", ", tags.Take(20));
         var keywords = tags
             .Concat(peopleIds.Select(x => $"person:{x}"))
             .Concat(animalIds.Select(x => $"animal:{x}"))
+            .Concat(locationIds.Select(x => $"location:{x}"))
             .Select(x => x.Trim())
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(40)
             .ToArray();
-        var subject = $"People: {peopleText}; Animals: {animalsText}";
+        var subject = $"People: {peopleText}; Animals: {animalsText}; Locations: {locationsText}";
         var comment =
             $"PhotoSortingApp Metadata{Environment.NewLine}" +
             $"People IDs: {peopleText}{Environment.NewLine}" +
             $"Animal IDs: {animalsText}{Environment.NewLine}" +
+            $"Location IDs: {locationsText}{Environment.NewLine}" +
             $"Tags: {tagText}";
 
         var initHr = CoInitializeEx(IntPtr.Zero, CoInit.COINIT_MULTITHREADED);

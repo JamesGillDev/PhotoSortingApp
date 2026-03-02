@@ -9,6 +9,7 @@ using Microsoft.Win32;
 using PhotoSortingApp.App.Services;
 using PhotoSortingApp.App.Theming;
 using PhotoSortingApp.App.Utils;
+using PhotoSortingApp.Core.Infrastructure;
 using PhotoSortingApp.Domain.Enums;
 using PhotoSortingApp.Domain.Models;
 
@@ -80,11 +81,14 @@ public class MainViewModel : ObservableObject
     private string _searchText = string.Empty;
     private string _personSearchText = string.Empty;
     private string _animalSearchText = string.Empty;
+    private string _locationSearchText = string.Empty;
     private string _detectedPeopleText = string.Empty;
     private string _detectedAnimalsText = string.Empty;
+    private string _detectedLocationsText = string.Empty;
     private string _smartRenameSummary = string.Empty;
     private string _peopleInputText = string.Empty;
     private string _animalInputText = string.Empty;
+    private string _locationInputText = string.Empty;
     private string _contextScanSummary = string.Empty;
     private string _statusMessage = "Select a folder to begin indexing.";
     private string _indexingStatus = string.Empty;
@@ -506,6 +510,12 @@ public class MainViewModel : ObservableObject
         set => SetProperty(ref _animalSearchText, value);
     }
 
+    public string LocationSearchText
+    {
+        get => _locationSearchText;
+        set => SetProperty(ref _locationSearchText, value);
+    }
+
     public string DetectedPeopleText
     {
         get => _detectedPeopleText;
@@ -516,6 +526,12 @@ public class MainViewModel : ObservableObject
     {
         get => _detectedAnimalsText;
         private set => SetProperty(ref _detectedAnimalsText, value);
+    }
+
+    public string DetectedLocationsText
+    {
+        get => _detectedLocationsText;
+        private set => SetProperty(ref _detectedLocationsText, value);
     }
 
     public string SmartRenameSummary
@@ -544,6 +560,20 @@ public class MainViewModel : ObservableObject
         set
         {
             if (!SetProperty(ref _animalInputText, value))
+            {
+                return;
+            }
+
+            RaiseCommandCanExecute();
+        }
+    }
+
+    public string LocationInputText
+    {
+        get => _locationInputText;
+        set
+        {
+            if (!SetProperty(ref _locationInputText, value))
             {
                 return;
             }
@@ -640,8 +670,8 @@ public class MainViewModel : ObservableObject
     public int SelectedPhotosCount => SelectedPhotos.Count;
 
     public string SelectedPhotosSummary => SelectedPhotosCount == 1
-        ? "1 photo selected"
-        : $"{SelectedPhotosCount} photos selected";
+        ? "1 item selected"
+        : $"{SelectedPhotosCount} items selected";
 
     public bool IsTileLayout => SelectedLayoutOption?.Value != GalleryLayoutMode.List;
 
@@ -693,10 +723,12 @@ public class MainViewModel : ObservableObject
             RenameInput = string.Empty;
             DetectedPeopleText = string.Empty;
             DetectedAnimalsText = string.Empty;
+            DetectedLocationsText = string.Empty;
             SmartRenameSummary = string.Empty;
             ContextScanSummary = string.Empty;
             PeopleInputText = string.Empty;
             AnimalInputText = string.Empty;
+            LocationInputText = string.Empty;
             _latestOrganizerPlanItems.Clear();
             SelectedPhoto = null;
             PreviewImage = null;
@@ -718,10 +750,12 @@ public class MainViewModel : ObservableObject
         RenameInput = string.Empty;
         DetectedPeopleText = string.Empty;
         DetectedAnimalsText = string.Empty;
+        DetectedLocationsText = string.Empty;
         SmartRenameSummary = string.Empty;
         ContextScanSummary = string.Empty;
         PeopleInputText = string.Empty;
         AnimalInputText = string.Empty;
+        LocationInputText = string.Empty;
         OrganizerPreviewItems.Clear();
         _latestOrganizerPlanItems.Clear();
         PlanSummary = "No organizer plan generated yet.";
@@ -1018,7 +1052,9 @@ public class MainViewModel : ObservableObject
             });
         }
 
-        SelectedAlbum = SmartAlbums.FirstOrDefault(x => x.Key == "all") ?? SmartAlbums.FirstOrDefault();
+        SelectedAlbum = SmartAlbums.FirstOrDefault(x => x.Key.StartsWith("year:", StringComparison.OrdinalIgnoreCase))
+            ?? SmartAlbums.FirstOrDefault(x => x.Key == "all")
+            ?? SmartAlbums.FirstOrDefault();
 
         var folders = await _services.PhotoQueryService.GetFolderSubpathsAsync(SelectedScanRoot.Id).ConfigureAwait(true);
         FolderFilters.Clear();
@@ -1139,6 +1175,7 @@ public class MainViewModel : ObservableObject
             SearchText = SearchText,
             PersonSearchText = PersonSearchText,
             AnimalSearchText = AnimalSearchText,
+            LocationSearchText = LocationSearchText,
             FromDateUtc = FromDateLocal.HasValue
                 ? DateTime.SpecifyKind(FromDateLocal.Value.Date, DateTimeKind.Local).ToUniversalTime()
                 : null,
@@ -1211,6 +1248,12 @@ public class MainViewModel : ObservableObject
             return;
         }
 
+        if (!SupportedPhotoExtensions.IsImage(selected.FullPath))
+        {
+            PreviewImage = null;
+            return;
+        }
+
         try
         {
             var image = await Task.Run(() => ImageLoader.LoadBitmap(selected.FullPath, 1200), token).ConfigureAwait(true);
@@ -1222,6 +1265,10 @@ public class MainViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             // Ignore cancellation.
+        }
+        catch
+        {
+            PreviewImage = null;
         }
     }
 
@@ -1243,16 +1290,19 @@ public class MainViewModel : ObservableObject
             RenameInput = string.Empty;
             DetectedPeopleText = string.Empty;
             DetectedAnimalsText = string.Empty;
+            DetectedLocationsText = string.Empty;
             SmartRenameSummary = string.Empty;
             ContextScanSummary = string.Empty;
             PeopleInputText = string.Empty;
             AnimalInputText = string.Empty;
+            LocationInputText = string.Empty;
             return;
         }
 
         RenameInput = Path.GetFileNameWithoutExtension(selected.FileName);
         var storedPeople = ParseCsvIds(selected.Asset.PeopleCsv);
         var storedAnimals = ParseCsvIds(selected.Asset.AnimalsCsv);
+        var storedLocations = ParseCsvIds(selected.Asset.LocationsCsv);
 
         try
         {
@@ -1267,7 +1317,14 @@ public class MainViewModel : ObservableObject
             }
 
             PopulateRenameSuggestions(selected, tags, analysis);
-            ApplyDetectedIdentityText(analysis.DetectedPeople, analysis.DetectedAnimals, storedPeople, storedAnimals, syncInputFields: true);
+            ApplyDetectedIdentityText(
+                analysis.DetectedPeople,
+                analysis.DetectedAnimals,
+                Array.Empty<string>(),
+                storedPeople,
+                storedAnimals,
+                storedLocations,
+                syncInputFields: true);
             SmartRenameSummary = BuildSmartSummary(analysis);
             ContextScanSummary = BuildContextSummary(analysis);
         }
@@ -1278,7 +1335,14 @@ public class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             PopulateRenameSuggestions(selected, Array.Empty<string>(), null);
-            ApplyDetectedIdentityText(Array.Empty<string>(), Array.Empty<string>(), storedPeople, storedAnimals, syncInputFields: true);
+            ApplyDetectedIdentityText(
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                storedPeople,
+                storedAnimals,
+                storedLocations,
+                syncInputFields: true);
             SmartRenameSummary = string.Empty;
             ContextScanSummary = string.Empty;
             StatusMessage = $"Unable to load tags for selected photo: {ex.Message}";
@@ -1456,7 +1520,7 @@ public class MainViewModel : ObservableObject
         var failed = 0;
         var contextTagged = 0;
         var totalContextTagsAdded = 0;
-        var previousValues = new List<(int PhotoId, IReadOnlyList<string> People, IReadOnlyList<string> Animals, IReadOnlyList<string> Tags)>();
+        var previousValues = new List<(int PhotoId, IReadOnlyList<string> People, IReadOnlyList<string> Animals, IReadOnlyList<string> Locations, IReadOnlyList<string> Tags)>();
         var preferredId = selection[0].Id;
 
         try
@@ -1476,6 +1540,7 @@ public class MainViewModel : ObservableObject
 
                     var existingPeople = ParseCsvIds(current.PeopleCsv);
                     var existingAnimals = ParseCsvIds(current.AnimalsCsv);
+                    var existingLocations = ParseCsvIds(current.LocationsCsv);
                     var existingTags = await _services.TaggingService.GetTagsAsync(item.Id).ConfigureAwait(true);
                     var analysis = await _services.SmartRenameService
                         .AnalyzeAsync(current, existingTags)
@@ -1483,6 +1548,7 @@ public class MainViewModel : ObservableObject
 
                     var mergedPeople = MergeIdentityIds(existingPeople, analysis.DetectedPeople);
                     var mergedAnimals = MergeIdentityIds(existingAnimals, analysis.DetectedAnimals);
+                    var mergedLocations = existingLocations;
                     var contextTags = BuildContextTagsFromAnalysis(analysis);
                     var mergedTags = existingTags
                         .Concat(contextTags)
@@ -1498,7 +1564,8 @@ public class MainViewModel : ObservableObject
                     }
 
                     var identityChanged = !IdentityListsEqual(existingPeople, mergedPeople) ||
-                                          !IdentityListsEqual(existingAnimals, mergedAnimals);
+                                          !IdentityListsEqual(existingAnimals, mergedAnimals) ||
+                                          !IdentityListsEqual(existingLocations, mergedLocations);
                     var tagsChanged = !TagListsEqual(existingTags, mergedTags);
                     if (!identityChanged && !tagsChanged)
                     {
@@ -1509,7 +1576,7 @@ public class MainViewModel : ObservableObject
                     if (identityChanged)
                     {
                         var persisted = await _services.PhotoEditService
-                            .UpdateDetectedSubjectsAsync(item.Id, mergedPeople, mergedAnimals)
+                            .UpdateDetectedSubjectsAsync(item.Id, mergedPeople, mergedAnimals, mergedLocations)
                             .ConfigureAwait(true);
                         if (persisted is null)
                         {
@@ -1528,7 +1595,7 @@ public class MainViewModel : ObservableObject
                             if (identityChanged)
                             {
                                 await _services.PhotoEditService
-                                    .UpdateDetectedSubjectsAsync(item.Id, existingPeople, existingAnimals)
+                                    .UpdateDetectedSubjectsAsync(item.Id, existingPeople, existingAnimals, existingLocations)
                                     .ConfigureAwait(true);
                             }
 
@@ -1547,7 +1614,7 @@ public class MainViewModel : ObservableObject
                             .Count(tag => !normalizedExisting.Contains(tag));
                     }
 
-                    previousValues.Add((item.Id, existingPeople, existingAnimals, existingTags));
+                    previousValues.Add((item.Id, existingPeople, existingAnimals, existingLocations, existingTags));
                     changed++;
                 }
                 catch
@@ -1565,7 +1632,7 @@ public class MainViewModel : ObservableObject
                         foreach (var action in previousValues)
                         {
                             await _services.PhotoEditService
-                                .UpdateDetectedSubjectsAsync(action.PhotoId, action.People, action.Animals)
+                                .UpdateDetectedSubjectsAsync(action.PhotoId, action.People, action.Animals, action.Locations)
                                 .ConfigureAwait(true);
                             await _services.TaggingService
                                 .ReplaceTagsAsync(action.PhotoId, action.Tags)
@@ -1608,9 +1675,10 @@ public class MainViewModel : ObservableObject
 
         var inputPeople = ParseIdentityInput(PeopleInputText);
         var inputAnimals = ParseIdentityInput(AnimalInputText);
-        if (inputPeople.Count == 0 && inputAnimals.Count == 0)
+        var inputLocations = ParseIdentityInput(LocationInputText);
+        if (inputPeople.Count == 0 && inputAnimals.Count == 0 && inputLocations.Count == 0)
         {
-            StatusMessage = "Enter one or more People/Animal IDs before saving.";
+            StatusMessage = "Enter one or more People/Animal/Location IDs before saving.";
             return;
         }
 
@@ -1621,7 +1689,7 @@ public class MainViewModel : ObservableObject
         var unchanged = 0;
         var failed = 0;
         var preferredId = selection[0].Id;
-        var previousValues = new List<(int PhotoId, IReadOnlyList<string> People, IReadOnlyList<string> Animals)>();
+        var previousValues = new List<(int PhotoId, IReadOnlyList<string> People, IReadOnlyList<string> Animals, IReadOnlyList<string> Locations)>();
 
         try
         {
@@ -1640,15 +1708,17 @@ public class MainViewModel : ObservableObject
 
                     var previousPeople = ParseCsvIds(current.PeopleCsv);
                     var previousAnimals = ParseCsvIds(current.AnimalsCsv);
+                    var previousLocations = ParseCsvIds(current.LocationsCsv);
                     if (IdentityListsEqual(previousPeople, inputPeople) &&
-                        IdentityListsEqual(previousAnimals, inputAnimals))
+                        IdentityListsEqual(previousAnimals, inputAnimals) &&
+                        IdentityListsEqual(previousLocations, inputLocations))
                     {
                         unchanged++;
                         continue;
                     }
 
                     var updated = await _services.PhotoEditService
-                        .UpdateDetectedSubjectsAsync(current.Id, inputPeople, inputAnimals)
+                        .UpdateDetectedSubjectsAsync(current.Id, inputPeople, inputAnimals, inputLocations)
                         .ConfigureAwait(true);
                     if (updated is null)
                     {
@@ -1656,7 +1726,7 @@ public class MainViewModel : ObservableObject
                         continue;
                     }
 
-                    previousValues.Add((current.Id, previousPeople, previousAnimals));
+                    previousValues.Add((current.Id, previousPeople, previousAnimals, previousLocations));
                     changed++;
                 }
                 catch
@@ -1674,7 +1744,7 @@ public class MainViewModel : ObservableObject
                         foreach (var action in previousValues)
                         {
                             await _services.PhotoEditService
-                                .UpdateDetectedSubjectsAsync(action.PhotoId, action.People, action.Animals)
+                                .UpdateDetectedSubjectsAsync(action.PhotoId, action.People, action.Animals, action.Locations)
                                 .ConfigureAwait(true);
                         }
 
@@ -1694,7 +1764,7 @@ public class MainViewModel : ObservableObject
                 if (changed > 0)
                 {
                     System.Windows.MessageBox.Show(
-                        $"Saved IDs to {changed} photo(s).",
+                        $"Saved People/Animal/Location IDs to {changed} photo(s).",
                         "Save IDs",
                         System.Windows.MessageBoxButton.OK,
                         System.Windows.MessageBoxImage.Information);
@@ -1727,56 +1797,59 @@ public class MainViewModel : ObservableObject
             var selected = SelectedPhoto;
             var people = ParseIdentityInput(PeopleInputText);
             var animals = ParseIdentityInput(AnimalInputText);
+            var locations = ParseIdentityInput(LocationInputText);
 
             var current = await _services.PhotoEditService
                 .GetPhotoByIdAsync(selected.Id)
                 .ConfigureAwait(true);
             if (current is null)
             {
-                StatusMessage = "Unable to save image changes. The photo record was not found.";
+                StatusMessage = "Unable to save media changes. The item record was not found.";
                 return;
             }
 
             var previousPeople = ParseCsvIds(current.PeopleCsv);
             var previousAnimals = ParseCsvIds(current.AnimalsCsv);
+            var previousLocations = ParseCsvIds(current.LocationsCsv);
             if (IdentityListsEqual(previousPeople, people) &&
-                IdentityListsEqual(previousAnimals, animals))
+                IdentityListsEqual(previousAnimals, animals) &&
+                IdentityListsEqual(previousLocations, locations))
             {
                 StatusMessage = "No pending manual ID changes.";
                 return;
             }
 
             var updated = await _services.PhotoEditService
-                .UpdateDetectedSubjectsAsync(selected.Id, people, animals)
+                .UpdateDetectedSubjectsAsync(selected.Id, people, animals, locations)
                 .ConfigureAwait(true);
             if (updated is null)
             {
-                StatusMessage = "Unable to save image changes. The photo record was not found.";
+                StatusMessage = "Unable to save media changes. The item record was not found.";
                 return;
             }
 
             PushUndoAction(
-                $"Save image metadata for {selected.FileName}",
+                $"Save media metadata for {selected.FileName}",
                 async () =>
                 {
                     await _services.PhotoEditService
-                        .UpdateDetectedSubjectsAsync(selected.Id, previousPeople, previousAnimals)
+                        .UpdateDetectedSubjectsAsync(selected.Id, previousPeople, previousAnimals, previousLocations)
                         .ConfigureAwait(true);
                     await RefreshAfterPhotoMutationAsync(selected.Id, refreshFilters: false).ConfigureAwait(true);
-                    return "Undo complete: restored previous image metadata IDs.";
+                    return "Undo complete: restored previous media metadata IDs.";
                 });
 
             await RefreshAfterPhotoMutationAsync(selected.Id, refreshFilters: false).ConfigureAwait(true);
-            StatusMessage = "Image saved to catalog + Windows file metadata (Subject/Comments/Tags when supported).";
+            StatusMessage = "Media metadata saved to catalog + Windows file metadata (Subject/Comments/Tags when supported).";
             System.Windows.MessageBox.Show(
-                "Image IDs were saved successfully.",
-                "Save Image",
+                "Media IDs (people, animal, location) were saved successfully.",
+                "Save Media",
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Save image failed: {ex.Message}";
+            StatusMessage = $"Save media failed: {ex.Message}";
         }
         finally
         {
@@ -2376,8 +2449,10 @@ public class MainViewModel : ObservableObject
     private void ApplyDetectedIdentityText(
         IReadOnlyList<string> analysisPeople,
         IReadOnlyList<string> analysisAnimals,
+        IReadOnlyList<string> analysisLocations,
         IReadOnlyList<string> storedPeople,
         IReadOnlyList<string> storedAnimals,
+        IReadOnlyList<string> storedLocations,
         bool syncInputFields = false)
     {
         var people = analysisPeople
@@ -2392,13 +2467,21 @@ public class MainViewModel : ObservableObject
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+        var locations = analysisLocations
+            .Concat(storedLocations)
+            .Select(SanitizeFileToken)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
         DetectedPeopleText = people.Count == 0 ? "(none)" : string.Join(", ", people);
         DetectedAnimalsText = animals.Count == 0 ? "(none)" : string.Join(", ", animals);
+        DetectedLocationsText = locations.Count == 0 ? "(none)" : string.Join(", ", locations);
         if (syncInputFields)
         {
             PeopleInputText = people.Count == 0 ? string.Empty : string.Join(", ", people);
             AnimalInputText = animals.Count == 0 ? string.Empty : string.Join(", ", animals);
+            LocationInputText = locations.Count == 0 ? string.Empty : string.Join(", ", locations);
         }
     }
 
@@ -2789,6 +2872,19 @@ public class MainViewModel : ObservableObject
         return compact.Trim('_');
     }
 
+    private int? TryGetSelectedAlbumYear()
+    {
+        if (SelectedAlbum is null ||
+            string.IsNullOrWhiteSpace(SelectedAlbum.Key) ||
+            !SelectedAlbum.Key.StartsWith("year:", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var rawYear = SelectedAlbum.Key["year:".Length..].Trim();
+        return int.TryParse(rawYear, out var year) ? year : null;
+    }
+
     private async Task BuildOrganizerPlanAsync()
     {
         if (SelectedScanRoot is null)
@@ -2798,8 +2894,14 @@ public class MainViewModel : ObservableObject
 
         try
         {
+            var targetYear = TryGetSelectedAlbumYear();
             var plan = await _services.OrganizerPlanService
-                .CreatePlanAsync(new OrganizerPlanRequest { ScanRootId = SelectedScanRoot.Id })
+                .CreatePlanAsync(new OrganizerPlanRequest
+                {
+                    ScanRootId = SelectedScanRoot.Id,
+                    TargetYear = targetYear,
+                    RuleType = OrganizeRuleType.YearFolders
+                })
                 .ConfigureAwait(true);
 
             _latestOrganizerPlanItems = plan.Items.ToList();
@@ -2811,7 +2913,9 @@ public class MainViewModel : ObservableObject
 
             PlanSummary =
                 $"Plan created at {plan.GeneratedUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss}. {plan.TotalMoves} of {plan.TotalEvaluated} files can move. Showing first {OrganizerPreviewItems.Count}.";
-            StatusMessage = "Organizer plan generated. Review and apply when ready.";
+            StatusMessage = targetYear.HasValue
+                ? $"Organizer plan generated for year {targetYear.Value} (photos + videos). Review and apply when ready."
+                : "Organizer plan generated for Year folders (photos + videos). Review and apply when ready.";
             RaiseCommandCanExecute();
         }
         catch (Exception ex)
@@ -2881,12 +2985,15 @@ public class MainViewModel : ObservableObject
         SearchText = string.Empty;
         PersonSearchText = string.Empty;
         AnimalSearchText = string.Empty;
+        LocationSearchText = string.Empty;
         FromDateLocal = null;
         ToDateLocal = null;
         SelectedDateSource = DateSourceOptions[0];
         SelectedFolderFilter = FolderFilters.FirstOrDefault();
         SelectedDuplicateGroup = null;
-        SelectedAlbum = SmartAlbums.FirstOrDefault(x => x.Key == "all") ?? SmartAlbums.FirstOrDefault();
+        SelectedAlbum = SmartAlbums.FirstOrDefault(x => x.Key.StartsWith("year:", StringComparison.OrdinalIgnoreCase))
+            ?? SmartAlbums.FirstOrDefault(x => x.Key == "all")
+            ?? SmartAlbums.FirstOrDefault();
         await LoadPhotosAsync(reset: true).ConfigureAwait(true);
     }
 
@@ -2907,7 +3014,7 @@ public class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Unable to open image: {ex.Message}";
+            StatusMessage = $"Unable to open file: {ex.Message}";
         }
     }
 

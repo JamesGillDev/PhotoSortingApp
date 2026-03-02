@@ -24,6 +24,7 @@ public interface IPhotoEditService
         int photoId,
         IReadOnlyList<string> peopleIds,
         IReadOnlyList<string> animalIds,
+        IReadOnlyList<string> locationIds,
         CancellationToken cancellationToken = default);
 
     Task<bool> DeletePhotoAsync(int photoId, bool deleteFile, CancellationToken cancellationToken = default);

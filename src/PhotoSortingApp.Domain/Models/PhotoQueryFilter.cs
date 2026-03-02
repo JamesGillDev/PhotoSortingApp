@@ -12,6 +12,8 @@ public class PhotoQueryFilter
 
     public string? AnimalSearchText { get; set; }
 
+    public string? LocationSearchText { get; set; }
+
     public DateTime? FromDateUtc { get; set; }
 
     public DateTime? ToDateUtc { get; set; }

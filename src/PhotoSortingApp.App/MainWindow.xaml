@@ -11,6 +11,12 @@
         MinHeight="700"
         MinWidth="1100"
         WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <CollectionViewSource x:Key="YearAlbumsView"
+                              Source="{Binding SmartAlbums}"
+                              Filter="YearAlbumsFilter" />
+    </Window.Resources>
+
     <Grid Background="{DynamicResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -21,103 +27,162 @@
 
         <Border Grid.Row="0"
                 Margin="12,12,12,8"
-                Padding="10"
+                Padding="12"
                 Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
                 BorderThickness="1"
-                CornerRadius="6">
-            <StackPanel>
-                <WrapPanel Margin="0,0,0,8"
-                           VerticalAlignment="Center">
-                    <TextBlock Margin="0,0,8,0"
+                CornerRadius="8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0"
+                           Margin="0,0,0,10"
+                           LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Left"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Text="Photo Workspace" />
+                    <TextBlock VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Text="Scan, filter, and organize with less clutter." />
+                </DockPanel>
+
+                <Grid Grid.Row="1"
+                      Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Margin="0,0,10,0"
                                VerticalAlignment="Center"
                                FontWeight="SemiBold"
-                               Text="Root Folder:" />
-                    <ComboBox Width="420"
-                              Margin="0,0,8,0"
+                               Text="Root Folder" />
+                    <ComboBox Grid.Column="1"
+                              MinWidth="380"
                               DisplayMemberPath="DisplayName"
                               ItemsSource="{Binding ScanRoots}"
                               SelectedItem="{Binding SelectedScanRoot}" />
-                    <Button Margin="0,0,8,0"
+                </Grid>
+
+                <WrapPanel Grid.Row="2"
+                           Margin="0,0,0,8"
+                           VerticalAlignment="Center">
+                    <Button Margin="0,0,8,8"
                             Padding="10,6"
                             Command="{Binding SelectFolderCommand}"
                             Content="Select Folder" />
-                    <Button Margin="0,0,8,0"
+                    <Button Margin="0,0,8,8"
                             Padding="10,6"
                             Command="{Binding RefreshScanRootsCommand}"
                             Content="Refresh Roots" />
-                    <Button Margin="0,0,8,0"
+                    <Button Margin="0,0,8,8"
                             Padding="10,6"
                             Command="{Binding RescanCommand}"
                             Content="Start Scan" />
-                    <Button Margin="0,0,8,0"
+                    <Button Margin="0,0,8,8"
                             Padding="10,6"
                             Command="{Binding ScanWholeComputerCommand}"
                             ToolTip="Scans fixed drives using safe exclusions to avoid system/program image noise."
                             Content="Scan This PC" />
-                    <Button Padding="10,6"
+                    <Button Margin="0,0,8,8"
+                            Padding="10,6"
                             Command="{Binding CancelScanCommand}"
                             Content="Cancel Scan" />
                 </WrapPanel>
 
-                <WrapPanel VerticalAlignment="Center">
-                    <TextBlock Margin="0,0,8,0"
-                               VerticalAlignment="Center"
-                               FontWeight="SemiBold"
-                               Text="Theme:" />
-                    <ComboBox Width="110"
-                              Margin="0,0,12,0"
-                              DisplayMemberPath="DisplayName"
-                              ItemsSource="{Binding ThemeOptions}"
-                              SelectedItem="{Binding SelectedThemeOption}" />
-                    <TextBlock Margin="0,0,8,0"
-                               VerticalAlignment="Center"
-                               FontWeight="SemiBold"
-                               Text="Search:" />
-                    <TextBox Width="240"
-                             Margin="0,0,8,0"
-                             VerticalContentAlignment="Center"
-                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
-                        <TextBox.InputBindings>
-                            <KeyBinding Key="Enter"
-                                        Command="{Binding ApplyFiltersCommand}" />
-                        </TextBox.InputBindings>
-                    </TextBox>
-                    <TextBlock Margin="0,0,8,0"
-                               VerticalAlignment="Center"
-                               FontWeight="SemiBold"
-                               Text="Person ID:" />
-                    <TextBox Width="130"
-                             Margin="0,0,8,0"
-                             VerticalContentAlignment="Center"
-                             Text="{Binding PersonSearchText, UpdateSourceTrigger=PropertyChanged}">
-                        <TextBox.InputBindings>
-                            <KeyBinding Key="Enter"
-                                        Command="{Binding ApplyFiltersCommand}" />
-                        </TextBox.InputBindings>
-                    </TextBox>
-                    <TextBlock Margin="0,0,8,0"
-                               VerticalAlignment="Center"
-                               FontWeight="SemiBold"
-                               Text="Animal ID:" />
-                    <TextBox Width="130"
-                             Margin="0,0,8,0"
-                             VerticalContentAlignment="Center"
-                             Text="{Binding AnimalSearchText, UpdateSourceTrigger=PropertyChanged}">
-                        <TextBox.InputBindings>
-                            <KeyBinding Key="Enter"
-                                        Command="{Binding ApplyFiltersCommand}" />
-                        </TextBox.InputBindings>
-                    </TextBox>
-                    <Button Margin="0,0,8,0"
-                            Padding="10,6"
-                            Command="{Binding ApplyFiltersCommand}"
-                            Content="Apply Filters" />
-                    <Button Padding="10,6"
-                            Command="{Binding ClearFiltersCommand}"
-                            Content="Clear" />
+                <WrapPanel Grid.Row="3"
+                           VerticalAlignment="Center">
+                    <StackPanel Width="250"
+                                Margin="0,0,12,8">
+                        <TextBlock Margin="0,0,0,4"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="Search" />
+                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter"
+                                            Command="{Binding ApplyFiltersCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
+                    </StackPanel>
+
+                    <StackPanel Width="160"
+                                Margin="0,0,12,8">
+                        <TextBlock Margin="0,0,0,4"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="Person ID" />
+                        <TextBox Text="{Binding PersonSearchText, UpdateSourceTrigger=PropertyChanged}">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter"
+                                            Command="{Binding ApplyFiltersCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
+                    </StackPanel>
+
+                    <StackPanel Width="160"
+                                Margin="0,0,12,8">
+                        <TextBlock Margin="0,0,0,4"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="Animal ID" />
+                        <TextBox Text="{Binding AnimalSearchText, UpdateSourceTrigger=PropertyChanged}">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter"
+                                            Command="{Binding ApplyFiltersCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
+                    </StackPanel>
+
+                    <StackPanel Width="170"
+                                Margin="0,0,12,8">
+                        <TextBlock Margin="0,0,0,4"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="Location ID" />
+                        <TextBox Text="{Binding LocationSearchText, UpdateSourceTrigger=PropertyChanged}">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter"
+                                            Command="{Binding ApplyFiltersCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
+                    </StackPanel>
+
+                    <StackPanel Width="120"
+                                Margin="0,0,12,8">
+                        <TextBlock Margin="0,0,0,4"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="Theme" />
+                        <ComboBox DisplayMemberPath="DisplayName"
+                                  ItemsSource="{Binding ThemeOptions}"
+                                  SelectedItem="{Binding SelectedThemeOption}" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Bottom"
+                                Margin="0,0,0,8">
+                        <Button Margin="0,0,8,0"
+                                Padding="10,6"
+                                Command="{Binding ApplyFiltersCommand}"
+                                Content="Apply Filters" />
+                        <Button Padding="10,6"
+                                Command="{Binding ClearFiltersCommand}"
+                                Content="Clear Filters" />
+                    </StackPanel>
                 </WrapPanel>
-            </StackPanel>
+            </Grid>
         </Border>
 
         <Border Grid.Row="1"
@@ -147,25 +212,45 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="300" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="390" />
+                <ColumnDefinition Width="420" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0"
                     Margin="0,0,8,0"
-                    Padding="8"
+                    Padding="12"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource SurfaceBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="6">
+                    CornerRadius="8">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
+                        <TextBlock Margin="0,0,0,8"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Text="Library Filters" />
                         <CheckBox Margin="0,0,0,10"
                                   IsChecked="{Binding EnableDuplicateDetection, Mode=TwoWay}"
                                   Content="Enable duplicate detection (SHA-256 on scan)" />
 
                         <TextBlock FontWeight="SemiBold"
+                                   Text="Year Folders" />
+                        <TextBlock Margin="0,2,0,4"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="Browse photos by year, like folders."
+                                   TextWrapping="Wrap" />
+                        <TextBlock Margin="0,0,0,4"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="Tip: Select a year, then Build Plan to auto-file that year."
+                                   TextWrapping="Wrap" />
+                        <ListBox Height="140"
+                                 Margin="0,4,0,10"
+                                 DisplayMemberPath="DisplayName"
+                                 ItemsSource="{Binding Source={StaticResource YearAlbumsView}}"
+                                 SelectedItem="{Binding SelectedAlbum}" />
+
+                        <TextBlock FontWeight="SemiBold"
                                    Text="Smart Albums" />
-                        <ListBox Height="210"
+                        <ListBox Height="120"
                                  Margin="0,4,0,10"
                                  DisplayMemberPath="DisplayName"
                                  ItemsSource="{Binding SmartAlbums}"
@@ -223,11 +308,11 @@
 
             <Border Grid.Column="1"
                     Margin="0,0,8,0"
-                    Padding="8"
+                    Padding="12"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource SurfaceBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="6">
+                    CornerRadius="8">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -260,8 +345,9 @@
                                       SelectedItem="{Binding SelectedLayoutOption}" />
                         </StackPanel>
                         <TextBlock VerticalAlignment="Center"
+                                   FontSize="14"
                                    FontWeight="SemiBold"
-                                   Text="{Binding ResultsSummary}" />
+                                   Text="{Binding ResultsSummary, StringFormat=Gallery - {0}}" />
                         <TextBlock Margin="14,0,0,0"
                                    VerticalAlignment="Center"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
@@ -312,6 +398,9 @@
                                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                                        Text="{Binding DateTakenText}"
                                                        TextTrimming="CharacterEllipsis" />
+                                            <TextBlock FontSize="11"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       Text="{Binding MediaTypeText}" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
@@ -359,6 +448,8 @@
                                                            Text="{Binding FileSizeText}" />
                                                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
                                                            Text="{Binding ResolutionText}" />
+                                                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           Text="{Binding MediaTypeText}" />
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -367,25 +458,34 @@
                         </ListBox>
                     </Grid>
 
-                    <StackPanel Grid.Row="2"
-                                Margin="0,8,0,0"
-                                Orientation="Horizontal"
-                                HorizontalAlignment="Right">
-                        <Button Padding="10,6"
+                    <DockPanel Grid.Row="2"
+                               Margin="0,8,0,0"
+                               LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="Tip: Double-click any photo/video to open the original file." />
+                        <Button DockPanel.Dock="Right"
+                                Padding="10,6"
                                 Command="{Binding LoadMoreCommand}"
                                 Content="Load More" />
-                    </StackPanel>
+                    </DockPanel>
                 </Grid>
             </Border>
 
             <Border Grid.Column="2"
-                    Padding="8"
+                    Padding="12"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource SurfaceBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="6">
+                    CornerRadius="8">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
+                        <TextBlock Margin="0,0,0,8"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Text="Inspector" />
+
                         <TextBlock FontWeight="SemiBold"
                                    Text="Preview" />
                         <Border Height="240"
@@ -397,13 +497,15 @@
                         </Border>
 
                         <TextBlock FontWeight="SemiBold"
-                                   Text="Photo Details" />
+                                   Text="Media Details" />
                         <Grid Margin="0,4,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="130" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
@@ -481,6 +583,21 @@
                                        Grid.Column="1"
                                        Text="{Binding DetectedAnimalsText}"
                                        TextWrapping="Wrap" />
+
+                            <TextBlock Grid.Row="9"
+                                       Grid.Column="0"
+                                       Text="Location IDs:" />
+                            <TextBlock Grid.Row="9"
+                                       Grid.Column="1"
+                                       Text="{Binding DetectedLocationsText}"
+                                       TextWrapping="Wrap" />
+
+                            <TextBlock Grid.Row="10"
+                                       Grid.Column="0"
+                                       Text="Media Type:" />
+                            <TextBlock Grid.Row="10"
+                                       Grid.Column="1"
+                                       Text="{Binding SelectedPhoto.MediaTypeText}" />
                         </Grid>
 
                         <TextBlock FontWeight="SemiBold"
@@ -515,7 +632,7 @@
                         </StackPanel>
 
                         <TextBlock FontWeight="SemiBold"
-                                   Text="Identity Scan" />
+                                   Text="Identity and Metadata" />
                         <TextBlock Margin="0,4,0,6"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    Text="{Binding SelectedPhotosSummary}" />
@@ -541,6 +658,15 @@
                                             Command="{Binding SaveImageCommand}" />
                             </TextBox.InputBindings>
                         </TextBox>
+                        <TextBlock Text="Location IDs (comma-separated):" />
+                        <TextBox Margin="0,4,0,6"
+                                 ToolTip="Example: denver_office,boston_hq,nyc_trip"
+                                 Text="{Binding LocationInputText, UpdateSourceTrigger=PropertyChanged}">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter"
+                                            Command="{Binding SaveImageCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
                         <StackPanel Margin="0,0,0,10"
                                     Orientation="Horizontal">
                             <Button Margin="0,0,8,0"
@@ -553,7 +679,7 @@
                                     Content="Save IDs" />
                             <Button Padding="10,6"
                                     Command="{Binding SaveImageCommand}"
-                                    Content="Save Image" />
+                                    Content="Save Media" />
                         </StackPanel>
                         <TextBlock Margin="0,0,0,6"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
@@ -594,7 +720,7 @@
                             <Button Margin="0,0,8,8"
                                     Padding="10,6"
                                     Command="{Binding OpenPhotoCommand}"
-                                    Content="Open Image" />
+                                    Content="Open File" />
                             <Button Margin="0,0,8,8"
                                     Padding="10,6"
                                     Command="{Binding OpenFileLocationCommand}"
@@ -617,55 +743,60 @@
                                     Content="Fix Location" />
                         </WrapPanel>
 
-                        <TextBlock FontWeight="SemiBold"
-                                   Text="Undo History" />
-                        <ComboBox Margin="0,4,0,6"
-                                  DisplayMemberPath="DisplayName"
-                                  ItemsSource="{Binding UndoHistory}"
-                                  SelectedItem="{Binding SelectedUndoAction}" />
-                        <StackPanel Margin="0,0,0,10"
-                                    Orientation="Horizontal">
-                            <Button Margin="0,0,8,0"
-                                    Padding="10,6"
-                                    Command="{Binding UndoLastChangeCommand}"
-                                    Content="Undo Last" />
-                            <Button Padding="10,6"
-                                    Command="{Binding UndoSelectedChangeCommand}"
-                                    Content="Undo Selected" />
-                        </StackPanel>
+                        <Expander Margin="0,0,0,10"
+                                  IsExpanded="False"
+                                  Header="Undo History">
+                            <StackPanel Margin="0,8,0,0">
+                                <ComboBox Margin="0,0,0,6"
+                                          DisplayMemberPath="DisplayName"
+                                          ItemsSource="{Binding UndoHistory}"
+                                          SelectedItem="{Binding SelectedUndoAction}" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Margin="0,0,8,0"
+                                            Padding="10,6"
+                                            Command="{Binding UndoLastChangeCommand}"
+                                            Content="Undo Last" />
+                                    <Button Padding="10,6"
+                                            Command="{Binding UndoSelectedChangeCommand}"
+                                            Content="Undo Selected" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Expander>
 
-                        <Separator Margin="0,0,0,10" />
-                        <TextBlock FontWeight="SemiBold"
-                                   Text="Organizer Plan (Dry-Run)" />
-                        <TextBlock Margin="0,4,0,8"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"
-                                   Text="{Binding PlanSummary}" />
-                        <StackPanel Margin="0,0,0,8"
-                                    Orientation="Horizontal">
-                            <Button Margin="0,0,8,0"
-                                    Padding="10,6"
-                                    Command="{Binding BuildOrganizerPlanCommand}"
-                                    Content="Build Plan" />
-                            <Button Padding="10,6"
-                                    Command="{Binding ApplyOrganizerPlanCommand}"
-                                    Content="Apply Plan" />
-                        </StackPanel>
-                        <DataGrid Height="240"
-                                  AutoGenerateColumns="False"
-                                  CanUserAddRows="False"
-                                  CanUserDeleteRows="False"
-                                  IsReadOnly="True"
-                                  ItemsSource="{Binding OrganizerPreviewItems}">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Binding="{Binding SourcePath}"
-                                                    Header="Source"
-                                                    Width="*" />
-                                <DataGridTextColumn Binding="{Binding DestinationPath}"
-                                                    Header="Destination"
-                                                    Width="*" />
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <Expander IsExpanded="False"
+                                  Header="Organizer Plan (Dry-Run)">
+                            <StackPanel Margin="0,8,0,0">
+                                <TextBlock Margin="0,0,0,8"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           Text="{Binding PlanSummary}" />
+                                <StackPanel Margin="0,0,0,8"
+                                            Orientation="Horizontal">
+                                    <Button Margin="0,0,8,0"
+                                            Padding="10,6"
+                                            Command="{Binding BuildOrganizerPlanCommand}"
+                                            Content="Build Plan" />
+                                    <Button Padding="10,6"
+                                            Command="{Binding ApplyOrganizerPlanCommand}"
+                                            Content="Apply Plan" />
+                                </StackPanel>
+                                <DataGrid Height="240"
+                                          AutoGenerateColumns="False"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False"
+                                          IsReadOnly="True"
+                                          ItemsSource="{Binding OrganizerPreviewItems}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Binding="{Binding SourcePath}"
+                                                            Header="Source"
+                                                            Width="*" />
+                                        <DataGridTextColumn Binding="{Binding DestinationPath}"
+                                                            Header="Destination"
+                                                            Width="*" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
@@ -673,12 +804,18 @@
 
         <Border Grid.Row="3"
                 Margin="12,0,12,12"
-                Padding="8"
+                Padding="10,8"
                 Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="6">
-            <TextBlock Text="{Binding StatusMessage}" />
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left"
+                           Margin="0,0,10,0"
+                           FontWeight="SemiBold"
+                           Text="Status" />
+                <TextBlock Text="{Binding StatusMessage}" />
+            </DockPanel>
         </Border>
     </Grid>
 </Window>

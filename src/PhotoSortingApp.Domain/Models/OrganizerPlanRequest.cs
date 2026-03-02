@@ -6,5 +6,7 @@ public class OrganizerPlanRequest
 {
     public int ScanRootId { get; set; }
 
-    public OrganizeRuleType RuleType { get; set; } = OrganizeRuleType.YearMonthFolders;
+    public int? TargetYear { get; set; }
+
+    public OrganizeRuleType RuleType { get; set; } = OrganizeRuleType.YearFolders;
 }

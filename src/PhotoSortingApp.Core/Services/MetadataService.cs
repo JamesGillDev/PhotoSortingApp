@@ -2,6 +2,7 @@ using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
 using MetadataExtractor.Formats.Jpeg;
 using MetadataExtractor.Formats.Png;
+using PhotoSortingApp.Core.Infrastructure;
 using PhotoSortingApp.Core.Interfaces;
 using PhotoSortingApp.Domain.Enums;
 using PhotoSortingApp.Domain.Models;
@@ -18,6 +19,11 @@ public class MetadataService : IMetadataService
     private static PhotoMetadataResult ExtractCore(string filePath)
     {
         var result = new PhotoMetadataResult();
+        if (!SupportedPhotoExtensions.IsImage(filePath))
+        {
+            PopulateFallbackDate(filePath, result);
+            return result;
+        }
 
         try
         {
@@ -82,26 +88,36 @@ public class MetadataService : IMetadataService
 
         if (result.DateTakenUtc is null)
         {
-            var createdUtc = File.GetCreationTimeUtc(filePath);
-            var modifiedUtc = File.GetLastWriteTimeUtc(filePath);
-
-            if (IsUsableTimestamp(createdUtc))
-            {
-                result.DateTakenUtc = createdUtc;
-                result.DateTakenSource = DateTakenSource.FileCreated;
-            }
-            else if (IsUsableTimestamp(modifiedUtc))
-            {
-                result.DateTakenUtc = modifiedUtc;
-                result.DateTakenSource = DateTakenSource.FileModified;
-            }
-            else
-            {
-                result.DateTakenSource = DateTakenSource.Unknown;
-            }
+            PopulateFallbackDate(filePath, result);
         }
 
         return result;
+    }
+
+    private static void PopulateFallbackDate(string filePath, PhotoMetadataResult result)
+    {
+        if (result.DateTakenUtc is not null)
+        {
+            return;
+        }
+
+        var createdUtc = File.GetCreationTimeUtc(filePath);
+        var modifiedUtc = File.GetLastWriteTimeUtc(filePath);
+
+        if (IsUsableTimestamp(createdUtc))
+        {
+            result.DateTakenUtc = createdUtc;
+            result.DateTakenSource = DateTakenSource.FileCreated;
+        }
+        else if (IsUsableTimestamp(modifiedUtc))
+        {
+            result.DateTakenUtc = modifiedUtc;
+            result.DateTakenSource = DateTakenSource.FileModified;
+        }
+        else
+        {
+            result.DateTakenSource = DateTakenSource.Unknown;
+        }
     }
 
     private static bool IsUsableTimestamp(DateTime value)

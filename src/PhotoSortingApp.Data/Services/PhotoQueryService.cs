@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PhotoSortingApp.Core.Infrastructure;
 using PhotoSortingApp.Core.Interfaces;
 using PhotoSortingApp.Domain.Enums;
 using PhotoSortingApp.Domain.Models;
@@ -12,6 +13,9 @@ public class PhotoQueryService : IPhotoQueryService
     private const string DuplicatePrefix = "dup:";
     private const string NoCaseCollation = "NOCASE";
     private const string LikeEscape = "\\";
+    private static readonly string[] VideoExtensions = SupportedPhotoExtensions.Videos
+        .Select(x => x.ToLowerInvariant())
+        .ToArray();
 
     private readonly Func<PhotoCatalogDbContext> _contextFactory;
 
@@ -41,7 +45,8 @@ public class PhotoQueryService : IPhotoQueryService
                     (x.Notes != null && EF.Functions.Like(EF.Functions.Collate(x.Notes, NoCaseCollation), pattern, LikeEscape)) ||
                     (x.TagsCsv != null && EF.Functions.Like(EF.Functions.Collate(x.TagsCsv, NoCaseCollation), pattern, LikeEscape)) ||
                     (x.PeopleCsv != null && EF.Functions.Like(EF.Functions.Collate(x.PeopleCsv, NoCaseCollation), pattern, LikeEscape)) ||
-                    (x.AnimalsCsv != null && EF.Functions.Like(EF.Functions.Collate(x.AnimalsCsv, NoCaseCollation), pattern, LikeEscape)));
+                    (x.AnimalsCsv != null && EF.Functions.Like(EF.Functions.Collate(x.AnimalsCsv, NoCaseCollation), pattern, LikeEscape)) ||
+                    (x.LocationsCsv != null && EF.Functions.Like(EF.Functions.Collate(x.LocationsCsv, NoCaseCollation), pattern, LikeEscape)));
             }
         }
 
@@ -66,6 +71,18 @@ public class PhotoQueryService : IPhotoQueryService
                 query = query.Where(x =>
                     x.AnimalsCsv != null &&
                     EF.Functions.Like(EF.Functions.Collate(x.AnimalsCsv, NoCaseCollation), pattern, LikeEscape));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.LocationSearchText))
+        {
+            var locationTokens = ParseSearchTokens(filter.LocationSearchText);
+            foreach (var token in locationTokens)
+            {
+                var pattern = BuildContainsLikePattern(token);
+                query = query.Where(x =>
+                    x.LocationsCsv != null &&
+                    EF.Functions.Like(EF.Functions.Collate(x.LocationsCsv, NoCaseCollation), pattern, LikeEscape));
             }
         }
 
@@ -140,7 +157,7 @@ public class PhotoQueryService : IPhotoQueryService
 
         var albums = new List<SmartAlbumItem>();
         var total = await baseQuery.CountAsync(cancellationToken).ConfigureAwait(false);
-        albums.Add(new SmartAlbumItem { Key = "all", Name = "All Photos", Count = total });
+        albums.Add(new SmartAlbumItem { Key = "all", Name = "All Media", Count = total });
 
         var unknownCount = await baseQuery.CountAsync(
             x => x.DateTaken == null || x.DateTakenSource == DateTakenSource.Unknown,
@@ -150,6 +167,11 @@ public class PhotoQueryService : IPhotoQueryService
         var recentThreshold = DateTime.UtcNow.AddDays(-30);
         var recentCount = await baseQuery.CountAsync(x => x.IndexedUtc >= recentThreshold, cancellationToken).ConfigureAwait(false);
         albums.Add(new SmartAlbumItem { Key = "recent", Name = "Recently Added", Count = recentCount });
+
+        var videosCount = await baseQuery
+            .CountAsync(x => VideoExtensions.Contains(x.Extension), cancellationToken)
+            .ConfigureAwait(false);
+        albums.Add(new SmartAlbumItem { Key = "videos", Name = "Videos", Count = videosCount });
 
         var monthGroups = await baseQuery
             .Where(x => x.DateTaken != null)
@@ -298,6 +320,11 @@ public class PhotoQueryService : IPhotoQueryService
                 .Select(g => g.Key!);
 
             return query.Where(x => x.Sha256 != null && duplicateHashes.Contains(x.Sha256));
+        }
+
+        if (albumKey.Equals("videos", StringComparison.OrdinalIgnoreCase))
+        {
+            return query.Where(x => VideoExtensions.Contains(x.Extension));
         }
 
         if (albumKey.StartsWith(DuplicatePrefix, StringComparison.OrdinalIgnoreCase))

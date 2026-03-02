@@ -2,5 +2,6 @@ namespace PhotoSortingApp.Domain.Enums;
 
 public enum OrganizeRuleType
 {
-    YearMonthFolders = 0
+    YearFolders = 0,
+    YearMonthFolders = 1
 }

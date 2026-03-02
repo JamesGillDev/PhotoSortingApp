@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.5.0] - 2026-03-02
+
+### Added
+- Video indexing support for common desktop formats (`.mp4`, `.mov`, `.m4v`, `.avi`, `.mkv`, `.wmv`, `.webm`) alongside existing photo formats.
+- Year-first browsing UX with a dedicated `Year Folders` list in the filter pane.
+- Organizer plan targeting by selected year album (example: select `Year 2016`, then build/apply plan for 2016 only).
+- Location ID support end-to-end:
+  - top-bar `Location ID` filter
+  - selected-item details display
+  - manual Location ID input/save
+  - persisted to catalog and Windows metadata fields
+- `Videos` smart album for quick access to indexed videos.
+
+### Changed
+- Organizer default strategy now places media into `Year` folders by default.
+- Main workspace layout was refactored for clearer grouping, spacing, and reduced visual clutter.
+- Startup guide content now reflects year-folder workflow and photo+video support.
+- Save/open wording was generalized to media/file terminology where applicable.
+
+### Fixed
+- Preview loading now safely skips non-image media and gracefully handles decode failures.
+- Thumbnail generation now explicitly skips non-image files to avoid unnecessary processing/errors.
+- Smart rename AI path now avoids image payload calls for videos and uses heuristic fallback text.
+
 ## [1.4.0] - 2026-02-27
 
 ### Added

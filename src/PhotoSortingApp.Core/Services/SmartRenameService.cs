@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using PhotoSortingApp.Core.Infrastructure;
 using PhotoSortingApp.Core.Interfaces;
 using PhotoSortingApp.Domain.Models;
 
@@ -111,6 +112,12 @@ public class SmartRenameService : ISmartRenameService
         CancellationToken cancellationToken = default)
     {
         var fallback = BuildHeuristicAnalysis(photo, existingTags);
+        if (!SupportedPhotoExtensions.IsImage(photo.FullPath))
+        {
+            fallback.Summary = "Video analysis uses filename/folder heuristics.";
+            return fallback;
+        }
+
         if (string.IsNullOrWhiteSpace(_apiKey) || !File.Exists(photo.FullPath))
         {
             return fallback;

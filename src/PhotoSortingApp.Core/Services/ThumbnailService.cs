@@ -21,7 +21,9 @@ public class ThumbnailService : IThumbnailService
 
     public async Task<string?> GetThumbnailPathAsync(PhotoAsset asset, int maxPixelSize = 256, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(asset.FullPath) || !File.Exists(asset.FullPath))
+        if (string.IsNullOrWhiteSpace(asset.FullPath) ||
+            !File.Exists(asset.FullPath) ||
+            !SupportedPhotoExtensions.IsImage(asset.FullPath))
         {
             return null;
         }

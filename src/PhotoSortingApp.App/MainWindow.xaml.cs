@@ -1,6 +1,8 @@
+using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using PhotoSortingApp.App.ViewModels;
 
 namespace PhotoSortingApp.App;
@@ -42,5 +44,16 @@ public partial class MainWindow : Window
         {
             viewModel.OpenPhotoCommand.Execute(null);
         }
+    }
+
+    private void YearAlbumsFilter(object sender, FilterEventArgs e)
+    {
+        if (e.Item is not SmartAlbumItemViewModel album)
+        {
+            e.Accepted = false;
+            return;
+        }
+
+        e.Accepted = album.Key.StartsWith("year:", StringComparison.OrdinalIgnoreCase);
     }
 }

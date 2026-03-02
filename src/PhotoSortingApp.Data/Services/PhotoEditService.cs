@@ -152,7 +152,8 @@ public class PhotoEditService : IPhotoEditService
             Notes = asset.Notes,
             TagsCsv = asset.TagsCsv,
             PeopleCsv = asset.PeopleCsv,
-            AnimalsCsv = asset.AnimalsCsv
+            AnimalsCsv = asset.AnimalsCsv,
+            LocationsCsv = asset.LocationsCsv
         };
 
         db.PhotoAssets.Add(copy);
@@ -216,7 +217,8 @@ public class PhotoEditService : IPhotoEditService
             Notes = asset.Notes,
             TagsCsv = asset.TagsCsv,
             PeopleCsv = asset.PeopleCsv,
-            AnimalsCsv = asset.AnimalsCsv
+            AnimalsCsv = asset.AnimalsCsv,
+            LocationsCsv = asset.LocationsCsv
         };
 
         db.PhotoAssets.Add(duplicate);
@@ -339,6 +341,7 @@ public class PhotoEditService : IPhotoEditService
         int photoId,
         IReadOnlyList<string> peopleIds,
         IReadOnlyList<string> animalIds,
+        IReadOnlyList<string> locationIds,
         CancellationToken cancellationToken = default)
     {
         using var db = _contextFactory();
@@ -352,6 +355,7 @@ public class PhotoEditService : IPhotoEditService
 
         asset.PeopleCsv = SerializeIds(peopleIds);
         asset.AnimalsCsv = SerializeIds(animalIds);
+        asset.LocationsCsv = SerializeIds(locationIds);
         asset.UpdatedUtc = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -359,6 +363,7 @@ public class PhotoEditService : IPhotoEditService
             asset.FullPath,
             ParseCsvValues(asset.PeopleCsv),
             ParseCsvValues(asset.AnimalsCsv),
+            ParseCsvValues(asset.LocationsCsv),
             ParseCsvValues(asset.TagsCsv));
         return asset;
     }

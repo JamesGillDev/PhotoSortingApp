@@ -47,6 +47,7 @@ public class DatabaseTaggingService : ITaggingService
             asset.FullPath,
             ParseTags(asset.PeopleCsv),
             ParseTags(asset.AnimalsCsv),
+            ParseTags(asset.LocationsCsv),
             ParseTags(asset.TagsCsv));
         return asset;
     }
