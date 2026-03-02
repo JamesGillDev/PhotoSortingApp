@@ -25,6 +25,8 @@ public class ScanService : IScanService
 
     private static readonly HashSet<string> ExcludedSegmentNames = new(StringComparer.OrdinalIgnoreCase)
     {
+        ".codex",
+        ".cache",
         ".vs",
         ".vscode",
         ".idea",
@@ -41,7 +43,11 @@ public class ScanService : IScanService
         "packages",
         "packagecache",
         "bower_components",
-        "venv"
+        "venv",
+        "cache",
+        "caches",
+        "thumbnailcache",
+        "thumbnails"
     };
 
     private readonly Func<PhotoCatalogDbContext> _contextFactory;
@@ -373,6 +379,11 @@ public class ScanService : IScanService
         }
 
         if (ExcludedTopLevelDirectoryNames.Contains(segments[0]))
+        {
+            return true;
+        }
+
+        if (segments.Any(segment => segment.StartsWith(".", StringComparison.Ordinal)))
         {
             return true;
         }
