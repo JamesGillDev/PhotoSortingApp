@@ -49,6 +49,12 @@ public class ScanService : IScanService
         "thumbnailcache",
         "thumbnails"
     };
+    private static readonly string[] ExcludedSegmentContainsTokens =
+    {
+        "website",
+        "web site",
+        "wwwroot"
+    };
 
     private readonly Func<PhotoCatalogDbContext> _contextFactory;
     private readonly IMetadataService _metadataService;
@@ -383,6 +389,11 @@ public class ScanService : IScanService
             return true;
         }
 
+        if (segments.Any(ContainsExcludedSegmentToken))
+        {
+            return true;
+        }
+
         if (segments.Any(segment => segment.StartsWith(".", StringComparison.Ordinal)))
         {
             return true;
@@ -424,5 +435,21 @@ public class ScanService : IScanService
             Path.GetFullPath(left),
             Path.GetFullPath(right),
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsExcludedSegmentToken(string segment)
+    {
+        if (string.IsNullOrWhiteSpace(segment))
+        {
+            return false;
+        }
+
+        var normalized = segment
+            .Replace('-', ' ')
+            .Replace('_', ' ')
+            .Trim();
+
+        return ExcludedSegmentContainsTokens.Any(token =>
+            normalized.Contains(token, StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -90,6 +90,7 @@
                                FontWeight="Bold"
                                Text="Photo Workspace" />
                     <TextBlock VerticalAlignment="Center"
+                               Margin="8,0,0,0"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                Text="Scan, filter, and organize with less clutter." />
                 </DockPanel>
@@ -145,7 +146,7 @@
 
                 <WrapPanel Grid.Row="4"
                            VerticalAlignment="Center">
-                    <StackPanel Width="250"
+                    <StackPanel Width="180"
                                 Margin="0,0,12,8">
                         <TextBlock Margin="0,0,0,4"
                                    FontSize="12"
@@ -160,7 +161,7 @@
                         </TextBox>
                     </StackPanel>
 
-                    <StackPanel Width="160"
+                    <StackPanel Width="180"
                                 Margin="0,0,12,8">
                         <TextBlock Margin="0,0,0,4"
                                    FontSize="12"
@@ -175,7 +176,7 @@
                         </TextBox>
                     </StackPanel>
 
-                    <StackPanel Width="160"
+                    <StackPanel Width="180"
                                 Margin="0,0,12,8">
                         <TextBlock Margin="0,0,0,4"
                                    FontSize="12"
@@ -190,7 +191,7 @@
                         </TextBox>
                     </StackPanel>
 
-                    <StackPanel Width="170"
+                    <StackPanel Width="180"
                                 Margin="0,0,12,8">
                         <TextBlock Margin="0,0,0,4"
                                    FontSize="12"
@@ -205,7 +206,7 @@
                         </TextBox>
                     </StackPanel>
 
-                    <StackPanel Width="120"
+                    <StackPanel Width="180"
                                 Margin="0,0,12,8">
                         <TextBlock Margin="0,0,0,4"
                                    FontSize="12"

@@ -68,12 +68,31 @@ public class PhotoQueryService : IPhotoQueryService
         "%\\__pycache__\\%",
         "%\\__pycache__"
     };
+    private static readonly string[] LikelyWebFolderLikePatterns =
+    {
+        "%\\wwwroot\\%",
+        "%\\wwwroot",
+        "%\\my web sites\\%",
+        "%\\my web sites",
+        "%\\website%\\%",
+        "%\\website%",
+        "%\\web site%\\%",
+        "%\\web site%"
+    };
     private static readonly string[] GeneratedAssetNameLikePatterns =
     {
         "%appicon%",
         "%favicon%",
+        "%icon%",
+        "%logo%",
+        "%brand%",
+        "%banner%",
+        "%sprite%",
         "%targetsize%",
         "%.scale-%",
+        "%tile%",
+        "%msweb%",
+        "%iis%",
         "%storelogo%",
         "%splashscreen%",
         "%square44x44%",
@@ -517,12 +536,27 @@ public class PhotoQueryService : IPhotoQueryService
             var localPattern = fileNamePattern;
             query = query.Where(x =>
                 !(ImageExtensions.Contains(x.Extension) &&
+                  x.DateTakenSource == DateTakenSource.Unknown &&
                   x.Width.HasValue &&
                   x.Height.HasValue &&
                   x.Width.Value <= 512 &&
                   x.Height.Value <= 512 &&
                   x.FileSizeBytes <= 1_500_000 &&
                   EF.Functions.Like(EF.Functions.Collate(x.FileName, NoCaseCollation), localPattern)));
+        }
+
+        foreach (var folderPattern in LikelyWebFolderLikePatterns)
+        {
+            var localPattern = folderPattern;
+            query = query.Where(x =>
+                !(ImageExtensions.Contains(x.Extension) &&
+                  x.DateTakenSource == DateTakenSource.Unknown &&
+                  x.Width.HasValue &&
+                  x.Height.HasValue &&
+                  x.Width.Value <= 2048 &&
+                  x.Height.Value <= 2048 &&
+                  x.FileSizeBytes <= 3_000_000 &&
+                  EF.Functions.Like(EF.Functions.Collate(x.FolderPath, NoCaseCollation), localPattern)));
         }
 
         return query;
