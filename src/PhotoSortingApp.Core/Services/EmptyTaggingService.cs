@@ -21,4 +21,9 @@ public class EmptyTaggingService : ITaggingService
     {
         return Task.FromResult<PhotoAsset?>(null);
     }
+
+    public Task<bool> EmbedTagsIntoFileAsync(int photoId, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(false);
+    }
 }

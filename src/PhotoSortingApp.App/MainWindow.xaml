@@ -863,9 +863,14 @@
                                     Padding="10,6"
                                     Command="{Binding UpdateTagCommand}"
                                     Content="Edit Tag" />
-                            <Button Padding="10,6"
+                            <Button Margin="0,0,8,0"
+                                    Padding="10,6"
                                     Command="{Binding RemoveTagCommand}"
                                     Content="Remove Tag" />
+                            <Button Padding="10,6"
+                                    ToolTip="Hard save: embed current tags into file metadata for selected media."
+                                    Command="{Binding SaveTagsToFileCommand}"
+                                    Content="Save Tags" />
                         </StackPanel>
 
                         <TextBlock FontWeight="SemiBold"

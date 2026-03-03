@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.6.1] - 2026-03-03
+
+### Added
+- New `Save Tags` action beside `Remove Tag` in the Inspector `Tags` section.
+- Explicit hard-save tag embedding workflow:
+  - run `Scan Environment / Event / Scene Tags`
+  - click `Save Tags` to force-embed current tags into file metadata for all selected media
+
+### Changed
+- Added a dedicated metadata-embed service path for tags (`EmbedTagsIntoFileAsync`) so users can explicitly persist tags to file metadata on demand without changing the tag set.
+
+### Release Readiness
+- `v1.6.1` is validated, published locally, and marked ready for public GitHub release.
+
 ## [1.6.0] - 2026-03-03
 
 ### Added

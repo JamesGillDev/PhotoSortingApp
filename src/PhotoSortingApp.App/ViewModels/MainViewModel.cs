@@ -215,6 +215,7 @@ public class MainViewModel : ObservableObject
         AddTagCommand = new AsyncRelayCommand(AddTagAsync, () => SelectedPhoto is not null && !string.IsNullOrWhiteSpace(TagInputText));
         UpdateTagCommand = new AsyncRelayCommand(UpdateTagAsync, () => SelectedPhoto is not null && !string.IsNullOrWhiteSpace(SelectedTag) && !string.IsNullOrWhiteSpace(TagInputText));
         RemoveTagCommand = new AsyncRelayCommand(RemoveTagAsync, () => SelectedPhoto is not null && !string.IsNullOrWhiteSpace(SelectedTag));
+        SaveTagsToFileCommand = new AsyncRelayCommand(SaveTagsToFileAsync, () => SelectedPhotosCount > 0 && !_isApplyingSmartActions && !IsIndexing);
         UndoLastChangeCommand = new AsyncRelayCommand(UndoLastChangeAsync, () => UndoHistory.Count > 0 && !IsIndexing);
         UndoSelectedChangeCommand = new AsyncRelayCommand(UndoSelectedChangeAsync, () => SelectedUndoAction is not null && !IsIndexing);
     }
@@ -300,6 +301,8 @@ public class MainViewModel : ObservableObject
     public ICommand UpdateTagCommand { get; }
 
     public ICommand RemoveTagCommand { get; }
+
+    public ICommand SaveTagsToFileCommand { get; }
 
     public ICommand UndoLastChangeCommand { get; }
 
@@ -2423,6 +2426,66 @@ public class MainViewModel : ObservableObject
         await ApplyTagChangeAsync(updated, previousTags, $"Removed tag '{SelectedTag}'").ConfigureAwait(true);
     }
 
+    private async Task SaveTagsToFileAsync()
+    {
+        var selection = GetBatchSelection();
+        if (selection.Count == 0)
+        {
+            return;
+        }
+
+        _isApplyingSmartActions = true;
+        RaiseCommandCanExecute();
+
+        var embedded = 0;
+        var failed = 0;
+        try
+        {
+            StatusMessage = $"Embedding tags into file metadata for {selection.Count} media item(s)...";
+            foreach (var item in selection)
+            {
+                try
+                {
+                    var updated = await _services.TaggingService
+                        .EmbedTagsIntoFileAsync(item.Id)
+                        .ConfigureAwait(true);
+                    if (updated)
+                    {
+                        embedded++;
+                    }
+                    else
+                    {
+                        failed++;
+                    }
+                }
+                catch
+                {
+                    failed++;
+                }
+            }
+
+            if (embedded > 0)
+            {
+                StatusMessage = failed == 0
+                    ? $"Hard save complete. Embedded tags to file metadata for {embedded} media item(s)."
+                    : $"Hard save complete. Embedded tags to file metadata for {embedded} media item(s), failed {failed}.";
+            }
+            else
+            {
+                StatusMessage = "Hard save failed. No selected media tags were embedded.";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Hard save failed: {ex.Message}";
+        }
+        finally
+        {
+            _isApplyingSmartActions = false;
+            RaiseCommandCanExecute();
+        }
+    }
+
     private async Task ApplyTagChangeAsync(IReadOnlyList<string> updatedTags, IReadOnlyList<string> previousTags, string description)
     {
         if (SelectedPhoto is null)
@@ -3501,6 +3564,7 @@ public class MainViewModel : ObservableObject
         ((AsyncRelayCommand)AddTagCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)UpdateTagCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)RemoveTagCommand).RaiseCanExecuteChanged();
+        ((AsyncRelayCommand)SaveTagsToFileCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)UndoLastChangeCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)UndoSelectedChangeCommand).RaiseCanExecuteChanged();
     }

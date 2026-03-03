@@ -52,6 +52,27 @@ public class DatabaseTaggingService : ITaggingService
         return asset;
     }
 
+    public async Task<bool> EmbedTagsIntoFileAsync(int photoId, CancellationToken cancellationToken = default)
+    {
+        using var db = _contextFactory();
+        var asset = await db.PhotoAssets
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Id == photoId, cancellationToken)
+            .ConfigureAwait(false);
+        if (asset is null)
+        {
+            return false;
+        }
+
+        WindowsFileMetadataWriter.TryWriteIdentityAndTags(
+            asset.FullPath,
+            ParseTags(asset.PeopleCsv),
+            ParseTags(asset.AnimalsCsv),
+            ParseTags(asset.LocationsCsv),
+            ParseTags(asset.TagsCsv));
+        return true;
+    }
+
     private static IReadOnlyList<string> ParseTags(string? tagsCsv)
     {
         if (string.IsNullOrWhiteSpace(tagsCsv))
