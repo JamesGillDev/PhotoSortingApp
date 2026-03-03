@@ -26,16 +26,30 @@ public class MainViewModel : ObservableObject
         ["graduation"] = "graduation",
         ["party"] = "party",
         ["concert"] = "concert",
+        ["live"] = "concert",
+        ["performance"] = "concert",
+        ["show"] = "concert",
+        ["tour"] = "concert",
+        ["recital"] = "concert",
         ["festival"] = "festival",
+        ["parade"] = "festival",
         ["vacation"] = "travel",
         ["travel"] = "travel",
+        ["trip"] = "travel",
+        ["roadtrip"] = "travel",
         ["hike"] = "outdoor_trip",
         ["picnic"] = "outdoor_trip",
+        ["camp"] = "outdoor_trip",
         ["meeting"] = "business",
         ["conference"] = "business",
+        ["webinar"] = "business",
         ["school"] = "school",
         ["sports"] = "sports",
-        ["game"] = "sports"
+        ["game"] = "sports",
+        ["match"] = "sports",
+        ["practice"] = "sports",
+        ["musicvideo"] = "music_video",
+        ["mv"] = "music_video"
     };
     private static readonly HashSet<string> ScenerySignals = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -44,6 +58,25 @@ public class MainViewModel : ObservableObject
     private static readonly HashSet<string> ArtworkSignals = new(StringComparer.OrdinalIgnoreCase)
     {
         "art", "artwork", "painting", "sculpture", "mural", "museum", "gallery", "statue"
+    };
+    private static readonly HashSet<string> IgnoredContextTokenValues = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "unknown", "none", "n_a", "na", "generic", "other", "misc", "photo", "image", "video"
+    };
+    private static readonly HashSet<string> AutoContextTagPrefixes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "media",
+        "environment",
+        "season",
+        "holiday",
+        "time",
+        "shot",
+        "event",
+        "people_hint",
+        "person",
+        "animal",
+        "subject",
+        "scene"
     };
 
     private readonly AppServices _services;
@@ -1414,7 +1447,7 @@ public class MainViewModel : ObservableObject
                 storedLocations,
                 syncInputFields: true);
             SmartRenameSummary = BuildSmartSummary(analysis);
-            ContextScanSummary = BuildContextSummary(analysis);
+            ContextScanSummary = BuildContextSummary(selected.Asset, analysis);
         }
         catch (OperationCanceledException)
         {
@@ -1637,8 +1670,9 @@ public class MainViewModel : ObservableObject
                     var mergedPeople = MergeIdentityIds(existingPeople, analysis.DetectedPeople);
                     var mergedAnimals = MergeIdentityIds(existingAnimals, analysis.DetectedAnimals);
                     var mergedLocations = existingLocations;
-                    var contextTags = BuildContextTagsFromAnalysis(analysis);
+                    var contextTags = BuildContextTagsFromAnalysis(current, analysis);
                     var mergedTags = existingTags
+                        .Where(tag => !IsAutoContextTag(tag))
                         .Concat(contextTags)
                         .Select(NormalizeTag)
                         .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -1987,7 +2021,7 @@ public class MainViewModel : ObservableObject
                     var analysis = await _services.SmartRenameService
                         .AnalyzeAsync(current, existingTags)
                         .ConfigureAwait(true);
-                    var contextTags = BuildContextTagsFromAnalysis(analysis);
+                    var contextTags = BuildContextTagsFromAnalysis(current, analysis);
                     if (contextTags.Count == 0)
                     {
                         unchanged++;
@@ -1995,6 +2029,7 @@ public class MainViewModel : ObservableObject
                     }
 
                     var merged = existingTags
+                        .Where(tag => !IsAutoContextTag(tag))
                         .Concat(contextTags)
                         .Select(NormalizeTag)
                         .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -2018,7 +2053,14 @@ public class MainViewModel : ObservableObject
 
                     previousValues.Add((item.Id, existingTags));
                     changed++;
-                    totalContextTagsAdded += contextTags.Count;
+                    var normalizedExisting = existingTags
+                        .Select(NormalizeTag)
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    totalContextTagsAdded += contextTags
+                        .Select(NormalizeTag)
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .Count(tag => !normalizedExisting.Contains(tag));
                 }
                 catch
                 {
@@ -2641,14 +2683,52 @@ public class MainViewModel : ObservableObject
         return leftSet.SetEquals(rightSet);
     }
 
-    private static IReadOnlyList<string> BuildContextTagsFromAnalysis(SmartRenameAnalysis analysis)
+    private static bool IsAutoContextTag(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return false;
+        }
+
+        var separatorIndex = tag.IndexOf(':');
+        if (separatorIndex <= 0)
+        {
+            return false;
+        }
+
+        var prefix = tag[..separatorIndex].Trim();
+        return AutoContextTagPrefixes.Contains(prefix);
+    }
+
+    private static IReadOnlyList<string> BuildContextTagsFromAnalysis(PhotoAsset photo, SmartRenameAnalysis analysis)
     {
         var tags = new List<string>();
+        var isVideo = SupportedPhotoExtensions.IsVideo(photo.FullPath);
+        var hasVision = analysis.UsedVisionModel;
+        var localDate = (photo.DateTaken ?? photo.FileLastWriteUtc).ToLocalTime();
+        var evidenceTokens = BuildContextEvidenceTokens(photo, analysis);
 
         void AddTag(string category, string? value)
         {
             var token = NormalizeTagToken(value);
             if (string.IsNullOrWhiteSpace(token))
+            {
+                return;
+            }
+
+            if (IgnoredContextTokenValues.Contains(token))
+            {
+                return;
+            }
+
+            if (category.Equals("shot", StringComparison.OrdinalIgnoreCase) &&
+                token is "photo" or "image" or "video")
+            {
+                return;
+            }
+
+            if (category.Equals("people_hint", StringComparison.OrdinalIgnoreCase) &&
+                token is "people" or "person")
             {
                 return;
             }
@@ -2662,32 +2742,79 @@ public class MainViewModel : ObservableObject
             tags.Add(tag);
         }
 
-        AddTag("environment", analysis.Setting);
-        AddTag("season", analysis.Season);
-        AddTag("holiday", analysis.Holiday);
-        AddTag("time", analysis.TimeOfDay);
-        AddTag("shot", analysis.ShotType);
-        AddTag("event", InferEventToken(analysis));
-        AddTag("people_hint", analysis.PeopleHint);
+        AddTag("media", isVideo ? "video" : "photo");
+
+        if (hasVision || HasTokenEvidence(evidenceTokens, analysis.Setting))
+        {
+            AddTag("environment", analysis.Setting);
+        }
+
+        if (!string.IsNullOrWhiteSpace(analysis.Holiday) &&
+            (hasVision || HolidayMatchesDate(localDate, analysis.Holiday) || HasTokenEvidence(evidenceTokens, analysis.Holiday)))
+        {
+            AddTag("holiday", analysis.Holiday);
+        }
+
+        if (!string.IsNullOrWhiteSpace(analysis.Season) &&
+            (hasVision || HasSeasonEvidence(evidenceTokens, analysis.Season, analysis.Holiday)))
+        {
+            AddTag("season", analysis.Season);
+        }
+
+        if (!string.IsNullOrWhiteSpace(analysis.TimeOfDay) &&
+            (hasVision || HasTimeEvidence(evidenceTokens, analysis.TimeOfDay)))
+        {
+            AddTag("time", analysis.TimeOfDay);
+        }
+
+        if (!isVideo && !string.IsNullOrWhiteSpace(analysis.ShotType))
+        {
+            var shotToken = NormalizeTagToken(analysis.ShotType);
+            if (hasVision || shotToken is "portrait" or "landscape" or "square")
+            {
+                AddTag("shot", shotToken);
+            }
+        }
+
+        AddTag("event", InferEventToken(photo, analysis, evidenceTokens));
+
+        if (hasVision || HasTokenEvidence(evidenceTokens, analysis.PeopleHint))
+        {
+            AddTag("people_hint", analysis.PeopleHint);
+        }
 
         foreach (var person in analysis.DetectedPeople.Take(4))
         {
+            if (IsGenericIdentityToken(person))
+            {
+                continue;
+            }
+
             AddTag("person", person);
         }
 
         foreach (var animal in analysis.DetectedAnimals.Take(4))
         {
+            if (IsGenericIdentityToken(animal))
+            {
+                continue;
+            }
+
             AddTag("animal", animal);
         }
 
         foreach (var subject in analysis.SubjectTags.Take(6))
         {
-            AddTag("subject", subject);
+            if (hasVision || HasTokenEvidence(evidenceTokens, subject))
+            {
+                AddTag("subject", subject);
+            }
         }
 
-        var sceneryMatch = analysis.ShotType?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true ||
-                           analysis.SubjectTags.Any(x => ScenerySignals.Contains(x)) ||
-                           ScenerySignals.Contains(analysis.Setting ?? string.Empty);
+        var sceneryMatch = (!isVideo || hasVision) &&
+                           (analysis.ShotType?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true ||
+                            analysis.SubjectTags.Any(x => ScenerySignals.Contains(x)) ||
+                            ScenerySignals.Contains(analysis.Setting ?? string.Empty));
         if (sceneryMatch)
         {
             AddTag("scene", "scenery");
@@ -2703,9 +2830,9 @@ public class MainViewModel : ObservableObject
         return tags;
     }
 
-    private static string BuildContextSummary(SmartRenameAnalysis analysis)
+    private static string BuildContextSummary(PhotoAsset photo, SmartRenameAnalysis analysis)
     {
-        var contextTags = BuildContextTagsFromAnalysis(analysis);
+        var contextTags = BuildContextTagsFromAnalysis(photo, analysis);
         if (contextTags.Count == 0)
         {
             return "Context labels: (none)";
@@ -2714,11 +2841,18 @@ public class MainViewModel : ObservableObject
         return $"Context labels: {string.Join(", ", contextTags.Take(8))}";
     }
 
-    private static string? InferEventToken(SmartRenameAnalysis analysis)
+    private static string? InferEventToken(
+        PhotoAsset photo,
+        SmartRenameAnalysis analysis,
+        IReadOnlySet<string> evidenceTokens)
     {
         if (!string.IsNullOrWhiteSpace(analysis.Holiday))
         {
-            return "holiday";
+            var localDate = (photo.DateTaken ?? photo.FileLastWriteUtc).ToLocalTime();
+            if (analysis.UsedVisionModel || HolidayMatchesDate(localDate, analysis.Holiday))
+            {
+                return "holiday";
+            }
         }
 
         var candidates = new List<string>();
@@ -2728,6 +2862,7 @@ public class MainViewModel : ObservableObject
         }
 
         candidates.AddRange(analysis.SubjectTags);
+        candidates.AddRange(evidenceTokens);
         if (!string.IsNullOrWhiteSpace(analysis.Summary))
         {
             candidates.AddRange(analysis.Summary.Split(
@@ -2749,7 +2884,159 @@ public class MainViewModel : ObservableObject
             }
         }
 
+        if (SupportedPhotoExtensions.IsVideo(photo.FullPath) &&
+            HasAnyToken(evidenceTokens, "music", "song", "lyric", "album", "karaoke", "version"))
+        {
+            return "music_video";
+        }
+
         return null;
+    }
+
+    private static IReadOnlySet<string> BuildContextEvidenceTokens(PhotoAsset photo, SmartRenameAnalysis analysis)
+    {
+        var rawValues = new List<string?>
+        {
+            photo.FileName,
+            photo.FolderPath,
+            Path.GetFileName(photo.FolderPath),
+            photo.Notes,
+            analysis.Summary,
+            analysis.Setting,
+            analysis.Season,
+            analysis.Holiday,
+            analysis.TimeOfDay,
+            analysis.ShotType,
+            analysis.PeopleHint
+        };
+        rawValues.AddRange(analysis.SubjectTags);
+        rawValues.AddRange(analysis.DetectedPeople);
+        rawValues.AddRange(analysis.DetectedAnimals);
+
+        return rawValues
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .SelectMany(TokenizeContextText)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyList<string> TokenizeContextText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return Array.Empty<string>();
+        }
+
+        var separators = new[] { ' ', '\t', '\r', '\n', '.', ',', ';', ':', '/', '\\', '-', '_', '(', ')', '[', ']', '{', '}', '#', '!', '+' };
+        return text
+            .Split(separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(NormalizeTagToken)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static bool HasTokenEvidence(IReadOnlySet<string> evidenceTokens, string? value)
+    {
+        var token = NormalizeTagToken(value);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
+
+        if (evidenceTokens.Contains(token) || evidenceTokens.Contains(token.Replace("_", string.Empty)))
+        {
+            return true;
+        }
+
+        foreach (var part in token.Split('_', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (evidenceTokens.Contains(part))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasAnyToken(IReadOnlySet<string> evidenceTokens, params string[] candidates)
+    {
+        foreach (var candidate in candidates)
+        {
+            if (HasTokenEvidence(evidenceTokens, candidate))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasSeasonEvidence(IReadOnlySet<string> evidenceTokens, string? season, string? holiday)
+    {
+        var token = NormalizeTagToken(season);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
+
+        if (HasTokenEvidence(evidenceTokens, token))
+        {
+            return true;
+        }
+
+        return token switch
+        {
+            "winter" => HasAnyToken(evidenceTokens, "snow", "snowy", "ski", "ice", "christmas", "xmas", holiday ?? string.Empty),
+            "spring" => HasAnyToken(evidenceTokens, "spring", "blossom", "bloom", "easter"),
+            "summer" => HasAnyToken(evidenceTokens, "summer", "beach", "vacation", "sunny"),
+            "fall" => HasAnyToken(evidenceTokens, "fall", "autumn", "leaf", "leaves", "harvest", "pumpkin", "halloween"),
+            _ => false
+        };
+    }
+
+    private static bool HasTimeEvidence(IReadOnlySet<string> evidenceTokens, string? timeOfDay)
+    {
+        var token = NormalizeTagToken(timeOfDay);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
+
+        if (HasTokenEvidence(evidenceTokens, token))
+        {
+            return true;
+        }
+
+        return token switch
+        {
+            "morning" => HasAnyToken(evidenceTokens, "sunrise", "dawn", "breakfast", "am"),
+            "afternoon" => HasAnyToken(evidenceTokens, "afternoon", "noon", "daytime"),
+            "evening" => HasAnyToken(evidenceTokens, "evening", "sunset", "dusk"),
+            "night" => HasAnyToken(evidenceTokens, "night", "midnight", "dark"),
+            _ => false
+        };
+    }
+
+    private static bool HolidayMatchesDate(DateTime localDate, string? holiday)
+    {
+        var token = NormalizeTagToken(holiday);
+        return token switch
+        {
+            "christmas" => localDate.Month == 12 && localDate.Day is >= 20 and <= 31,
+            "halloween" => localDate.Month == 10 && localDate.Day is >= 25 and <= 31,
+            "thanksgiving" => localDate.Month == 11 && localDate.Day is >= 22 and <= 28,
+            "new_year" => localDate.Month == 1 && localDate.Day <= 3,
+            "valentines" => localDate.Month == 2 && localDate.Day == 14,
+            "independence_day" => localDate.Month == 7 && localDate.Day == 4,
+            _ => false
+        };
+    }
+
+    private static bool IsGenericIdentityToken(string? value)
+    {
+        var token = NormalizeTagToken(value);
+        return token is "person" or "people" or "group" or "animal" or "pet" or "unknown";
     }
 
     private static string NormalizeTagToken(string? value)

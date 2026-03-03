@@ -3,7 +3,7 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/UI-WPF-512BD4)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![EF%20Core](https://img.shields.io/badge/EF%20Core-8.0-5C2D91)](https://learn.microsoft.com/ef/core/)
-[![Version](https://img.shields.io/badge/Version-1.5.2-brightgreen)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.6.0-brightgreen)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-BLS%201.1-blue.svg)](./LICENSE.md)
 
 PhotoSortingApp is a local-first Windows desktop media catalog and safe organizer planner.
@@ -36,6 +36,11 @@ It is designed for large unsorted libraries (10,000+ photos/videos), with increm
 - Gallery layout options:
   - Tiles (default)
   - List
+- Adjustable workspace panes with drag resize splitters between:
+  - `Library Filters`
+  - `Gallery`
+  - `Inspector`
+- Pinned section headers for `Library Filters` and `Inspector` so titles remain visible while scrolling.
 - Tile layout wraps within the viewport and scrolls vertically (no side scrolling)
 - Multiple photo selection in gallery (Ctrl/Shift multi-select)
 - Sort options:
@@ -89,6 +94,8 @@ It is designed for large unsorted libraries (10,000+ photos/videos), with increm
 - Context scan tool for selected photos:
   - adds structured tags for environment, event, holiday, season, time-of-day, shot type, subjects, and scene hints (scenery/artwork)
   - supports both AI-assisted and heuristic analysis paths
+  - uses media-aware evidence gating to reduce false tags on videos
+  - replaces prior auto-generated context tags when rescanning so stale labels do not accumulate
 - Tag management on selected photos:
   - add tags
   - edit existing tags
@@ -216,12 +223,12 @@ dotnet publish src/PhotoSortingApp.App/PhotoSortingApp.App.csproj -c Release -r 
 
 ## Versioning and Public GitHub Releases
 
-- Current release version: `1.5.2`
+- Current release version: `1.6.0`
 - Release history and iteration notes: [`CHANGELOG.md`](./CHANGELOG.md)
 - Build version metadata source: `Directory.Build.props`
 
 Public release readiness:
-- `v1.5.2` is validated and ready for public release.
+- `v1.6.0` is validated and ready for public release.
 
 Current release iteration history:
 
@@ -235,16 +242,17 @@ Current release iteration history:
 - `v1.5.0` (2026-03-02): Added video indexing support, year-first browsing and organizer targeting, location IDs, and overall UI/UX layout cleanup.
 - `v1.5.1` (2026-03-02): Added gallery right-click context actions (including Open File Location), added Images/Videos and system-media exclusion toggles, and fixed folder filter reload lock-up behavior.
 - `v1.5.2` (2026-03-02): Tightened cross-PC noise exclusions (system/cache/web assets), fixed dropdown hover color behavior, aligned top filter control sizing, fixed title/subtitle spacing, and defaulted refresh/clear to `All Media`.
+- `v1.6.0` (2026-03-03): Added draggable pane resizing with pinned section headers, and upgraded context/environment scanning with media-aware evidence-based tagging plus false-positive reduction for videos.
 
 Tag and publish a new GitHub release iteration:
 
 ```powershell
-git tag v1.5.2
+git tag v1.6.0
 git push origin main
-git push origin v1.5.2
+git push origin v1.6.0
 ```
 
-Then create a GitHub Release from the matching tag (for example `v1.5.2`) and copy the matching section from `CHANGELOG.md` into the release notes.
+Then create a GitHub Release from the matching tag (for example `v1.6.0`) and copy the matching section from `CHANGELOG.md` into the release notes.
 
 ## AI Extension Points (v1 Stubs)
 

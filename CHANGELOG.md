@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.6.0] - 2026-03-03
+
+### Added
+- Draggable workspace pane resizing between `Library Filters`, `Gallery`, and `Inspector`.
+- `media:photo` / `media:video` context labels in environment/event/scene scanning.
+
+### Changed
+- `Library Filters` and `Inspector` section titles are now pinned so they remain visible while pane content scrolls.
+- Context scanning is now media-aware and evidence-based:
+  - video context labels are inferred from filename/folder/metadata evidence instead of timestamp defaults
+  - event keyword coverage expanded (concert/live/performance/tour/music-video/travel/sports/business variants)
+  - repeated context scans now replace prior auto-generated context tags with the latest inferred set
+
+### Fixed
+- Reduced false-positive video context tagging (for example `shot:photo`, timestamp-only `season:*`, timestamp-only `time:*`).
+
+### Release Readiness
+- `v1.6.0` is validated, published locally, and marked ready for public GitHub release.
+
 ## [1.5.2] - 2026-03-02
 
 ### Added

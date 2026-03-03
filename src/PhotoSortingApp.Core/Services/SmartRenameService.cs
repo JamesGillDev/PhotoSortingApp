@@ -85,6 +85,48 @@ public class SmartRenameService : ISmartRenameService
         ["pet"] = "pet"
     };
 
+    private static readonly Dictionary<string, string> SeasonHints = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["winter"] = "winter",
+        ["snow"] = "winter",
+        ["snowy"] = "winter",
+        ["spring"] = "spring",
+        ["blossom"] = "spring",
+        ["summer"] = "summer",
+        ["beach"] = "summer",
+        ["fall"] = "fall",
+        ["autumn"] = "fall",
+        ["leaf"] = "fall",
+        ["leaves"] = "fall"
+    };
+
+    private static readonly Dictionary<string, string> TimeOfDayHints = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["morning"] = "morning",
+        ["sunrise"] = "morning",
+        ["dawn"] = "morning",
+        ["afternoon"] = "afternoon",
+        ["evening"] = "evening",
+        ["sunset"] = "evening",
+        ["night"] = "night",
+        ["midnight"] = "night"
+    };
+
+    private static readonly Dictionary<string, string> HolidayHints = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["christmas"] = "christmas",
+        ["xmas"] = "christmas",
+        ["halloween"] = "halloween",
+        ["thanksgiving"] = "thanksgiving",
+        ["newyear"] = "new_year",
+        ["newyears"] = "new_year",
+        ["valentine"] = "valentines",
+        ["valentines"] = "valentines",
+        ["easter"] = "easter",
+        ["independenceday"] = "independence_day",
+        ["july4"] = "independence_day"
+    };
+
     private readonly HttpClient _httpClient;
     private readonly string _model;
     private readonly string _chatCompletionsUrl;
@@ -251,13 +293,26 @@ public class SmartRenameService : ISmartRenameService
     {
         var analysis = new SmartRenameAnalysis();
         var localDate = (photo.DateTaken ?? photo.FileLastWriteUtc).ToLocalTime();
-        analysis.Season = GetSeason(localDate.Month);
-        analysis.TimeOfDay = GetTimeOfDay(localDate.Hour);
-        analysis.Holiday = GetHoliday(localDate);
-        analysis.ShotType = GetShotType(photo.Width, photo.Height);
+        var isImage = SupportedPhotoExtensions.IsImage(photo.FullPath);
+        var isVideo = SupportedPhotoExtensions.IsVideo(photo.FullPath);
 
         var textBlob = $"{photo.FileName} {photo.FolderPath} {photo.Notes} {string.Join(' ', existingTags)}";
         var tokens = Tokenize(textBlob);
+        analysis.ShotType = GetShotType(photo.Width, photo.Height);
+
+        if (isImage)
+        {
+            analysis.Season = GetSeason(localDate.Month);
+            analysis.TimeOfDay = GetTimeOfDay(localDate.Hour);
+            analysis.Holiday = GetHoliday(localDate);
+        }
+        else if (isVideo)
+        {
+            // Avoid timestamp-only assumptions for videos; require textual evidence.
+            analysis.Season = MatchFirst(tokens, SeasonHints);
+            analysis.TimeOfDay = MatchFirst(tokens, TimeOfDayHints);
+            analysis.Holiday = MatchFirst(tokens, HolidayHints);
+        }
 
         analysis.Setting = MatchFirst(tokens, SettingHints);
         analysis.PeopleHint = MatchFirst(tokens, PeopleHints);
@@ -285,7 +340,9 @@ public class SmartRenameService : ISmartRenameService
         analysis.DetectedAnimals = detectedAnimals;
 
         analysis.SuggestedBaseName = BuildBaseNameFromAnalysis(analysis, photo);
-        analysis.Summary = "Heuristic analysis";
+        analysis.Summary = isVideo
+            ? "Heuristic analysis from video filename/folder metadata."
+            : "Heuristic analysis";
         return analysis;
     }
 
@@ -714,11 +771,11 @@ public class SmartRenameService : ISmartRenameService
         return null;
     }
 
-    private static string GetShotType(int? width, int? height)
+    private static string? GetShotType(int? width, int? height)
     {
         if (!width.HasValue || !height.HasValue || width <= 0 || height <= 0)
         {
-            return "photo";
+            return null;
         }
 
         if (height > width)

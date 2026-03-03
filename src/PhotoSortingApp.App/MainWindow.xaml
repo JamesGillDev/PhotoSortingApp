@@ -319,24 +319,32 @@
         <Grid Grid.Row="2"
               Margin="12,0,12,8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="420" />
+                <ColumnDefinition Width="300" MinWidth="220" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" MinWidth="420" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="420" MinWidth="320" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0"
-                    Margin="0,0,8,0"
+                    Margin="0"
                     Padding="12"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource SurfaceBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="8">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <TextBlock Margin="0,0,0,8"
-                                   FontSize="14"
-                                   FontWeight="SemiBold"
-                                   Text="Library Filters" />
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Margin="0,0,0,8"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Text="Library Filters" />
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
                         <CheckBox Margin="0,0,0,10"
                                   IsChecked="{Binding EnableDuplicateDetection, Mode=TwoWay}"
                                   Content="Enable duplicate detection (SHA-256 on scan)" />
@@ -406,17 +414,27 @@
                                     Command="{Binding RefreshDuplicatesCommand}"
                                     Content="Refresh" />
                         </DockPanel>
-                        <ListBox Height="180"
-                                 Margin="0,4,0,0"
-                                 DisplayMemberPath="DisplayName"
-                                 ItemsSource="{Binding DuplicateGroups}"
-                                 SelectedItem="{Binding SelectedDuplicateGroup}" />
-                    </StackPanel>
-                </ScrollViewer>
+                         <ListBox Height="180"
+                                  Margin="0,4,0,0"
+                                  DisplayMemberPath="DisplayName"
+                                  ItemsSource="{Binding DuplicateGroups}"
+                                  SelectedItem="{Binding SelectedDuplicateGroup}" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
             </Border>
 
-            <Border Grid.Column="1"
-                    Margin="0,0,8,0"
+            <GridSplitter Grid.Column="1"
+                          Width="6"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Background="{DynamicResource SurfaceBorderBrush}"
+                          ResizeBehavior="PreviousAndNext"
+                          ResizeDirection="Columns"
+                          ShowsPreview="True" />
+
+            <Border Grid.Column="2"
+                    Margin="0"
                     Padding="12"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource SurfaceBorderBrush}"
@@ -594,18 +612,33 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Column="2"
+            <GridSplitter Grid.Column="3"
+                          Width="6"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Background="{DynamicResource SurfaceBorderBrush}"
+                          ResizeBehavior="PreviousAndNext"
+                          ResizeDirection="Columns"
+                          ShowsPreview="True" />
+
+            <Border Grid.Column="4"
                     Padding="12"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource SurfaceBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="8">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <TextBlock Margin="0,0,0,8"
-                                   FontSize="14"
-                                   FontWeight="SemiBold"
-                                   Text="Inspector" />
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Margin="0,0,0,8"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Text="Inspector" />
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
 
                         <TextBlock FontWeight="SemiBold"
                                    Text="Preview" />
@@ -918,8 +951,9 @@
                                 </DataGrid>
                             </StackPanel>
                         </Expander>
-                    </StackPanel>
-                </ScrollViewer>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
             </Border>
         </Grid>
 
