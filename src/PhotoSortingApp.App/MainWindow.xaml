@@ -17,24 +17,53 @@
                               Source="{Binding SmartAlbums}"
                               Filter="YearAlbumsFilter" />
         <ContextMenu x:Key="PhotoItemContextMenu"
-                     Background="{DynamicResource ControlPopupBackgroundBrush}"
-                     BorderBrush="{DynamicResource ControlPopupBorderBrush}"
-                     Foreground="{DynamicResource ControlForegroundBrush}">
+                      Style="{DynamicResource ContextPhotoMenuStyle}"
+                      Background="{DynamicResource ControlPopupBackgroundBrush}"
+                      BorderBrush="{DynamicResource ControlPopupBorderBrush}"
+                      Foreground="{DynamicResource ControlForegroundBrush}"
+                      ItemContainerStyle="{DynamicResource ContextPhotoMenuItemStyle}">
             <ContextMenu.Resources>
-                <Style TargetType="{x:Type MenuItem}">
+                <Style x:Key="ContextPhotoMenuStyle"
+                       TargetType="{x:Type ContextMenu}">
+                    <Setter Property="SnapsToDevicePixels" Value="True" />
+                    <Setter Property="UseLayoutRounding" Value="True" />
+                    <Setter Property="OverridesDefaultStyle" Value="True" />
+                    <Setter Property="HasDropShadow" Value="False" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="{x:Type ContextMenu}">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="1"
+                                        Padding="2"
+                                        SnapsToDevicePixels="True">
+                                    <StackPanel IsItemsHost="True"
+                                                KeyboardNavigation.DirectionalNavigation="Cycle" />
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+                <Style x:Key="ContextPhotoMenuItemStyle"
+                       TargetType="{x:Type MenuItem}">
                     <Setter Property="Background" Value="{DynamicResource ControlPopupBackgroundBrush}" />
                     <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
                     <Setter Property="Padding" Value="12,6" />
+                    <Setter Property="OverridesDefaultStyle" Value="True" />
+                    <Setter Property="SnapsToDevicePixels" Value="True" />
+                    <Setter Property="UseLayoutRounding" Value="True" />
+                    <Setter Property="HorizontalContentAlignment" Value="Left" />
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="{x:Type MenuItem}">
                                 <Border x:Name="MenuItemBorder"
                                         Background="{TemplateBinding Background}"
-                                        BorderBrush="Transparent"
-                                        BorderThickness="1"
+                                        BorderThickness="0"
                                         SnapsToDevicePixels="True">
                                     <ContentPresenter Margin="{TemplateBinding Padding}"
                                                       ContentSource="Header"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalAlignment="Center"
                                                       RecognizesAccessKey="True"
                                                       TextElement.Foreground="{TemplateBinding Foreground}" />
                                 </Border>
@@ -51,7 +80,8 @@
                         </Setter.Value>
                     </Setter>
                 </Style>
-                <Style TargetType="{x:Type Separator}">
+                <Style x:Key="ContextPhotoSeparatorStyle"
+                       TargetType="{x:Type Separator}">
                     <Setter Property="Margin" Value="8,4" />
                     <Setter Property="Template">
                         <Setter.Value>
@@ -65,19 +95,26 @@
                 </Style>
             </ContextMenu.Resources>
             <MenuItem Header="Open File"
+                      Style="{StaticResource ContextPhotoMenuItemStyle}"
                       Click="OnContextOpenFileClick" />
             <MenuItem Header="Open File Location"
+                      Style="{StaticResource ContextPhotoMenuItemStyle}"
                       Click="OnContextOpenFileLocationClick" />
-            <Separator />
+            <Separator Style="{StaticResource ContextPhotoSeparatorStyle}" />
             <MenuItem Header="Save Media IDs"
+                      Style="{StaticResource ContextPhotoMenuItemStyle}"
                       Click="OnContextSaveMediaClick" />
             <MenuItem Header="Move"
+                      Style="{StaticResource ContextPhotoMenuItemStyle}"
                       Click="OnContextMoveClick" />
             <MenuItem Header="Copy"
+                      Style="{StaticResource ContextPhotoMenuItemStyle}"
                       Click="OnContextCopyClick" />
             <MenuItem Header="Duplicate"
+                      Style="{StaticResource ContextPhotoMenuItemStyle}"
                       Click="OnContextDuplicateClick" />
             <MenuItem Header="Fix Location"
+                      Style="{StaticResource ContextPhotoMenuItemStyle}"
                       Click="OnContextFixLocationClick" />
         </ContextMenu>
     </Window.Resources>
