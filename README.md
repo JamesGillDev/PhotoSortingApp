@@ -3,7 +3,7 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/UI-WPF-512BD4)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![EF%20Core](https://img.shields.io/badge/EF%20Core-8.0-5C2D91)](https://learn.microsoft.com/ef/core/)
-[![Version](https://img.shields.io/badge/Version-1.6.1-brightgreen)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.6.2-brightgreen)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-BLS%201.1-blue.svg)](./LICENSE.md)
 
 PhotoSortingApp is a local-first Windows desktop media catalog and safe organizer planner.
@@ -225,12 +225,12 @@ dotnet publish src/PhotoSortingApp.App/PhotoSortingApp.App.csproj -c Release -r 
 
 ## Versioning and Public GitHub Releases
 
-- Current release version: `1.6.1`
+- Current release version: `1.6.2`
 - Release history and iteration notes: [`CHANGELOG.md`](./CHANGELOG.md)
 - Build version metadata source: `Directory.Build.props`
 
 Public release readiness:
-- `v1.6.1` is validated and ready for public release.
+- `v1.6.2` is validated and ready for public release.
 
 Current release iteration history:
 
@@ -246,16 +246,17 @@ Current release iteration history:
 - `v1.5.2` (2026-03-02): Tightened cross-PC noise exclusions (system/cache/web assets), fixed dropdown hover color behavior, aligned top filter control sizing, fixed title/subtitle spacing, and defaulted refresh/clear to `All Media`.
 - `v1.6.0` (2026-03-03): Added draggable pane resizing with pinned section headers, and upgraded context/environment scanning with media-aware evidence-based tagging plus false-positive reduction for videos.
 - `v1.6.1` (2026-03-03): Added `Save Tags` hard-save action beside `Remove Tag` to force-embed the current tag set (including context scan output) into file metadata for selected media.
+- `v1.6.2` (2026-03-03): Normalized top filter row control heights (`Search`, `Person ID`, `Animal ID`, `Location ID`, `Theme`, `Apply Filters`, `Clear Filters`) for a cleaner and more professional layout.
 
 Tag and publish a new GitHub release iteration:
 
 ```powershell
-git tag v1.6.1
+git tag v1.6.2
 git push origin main
-git push origin v1.6.1
+git push origin v1.6.2
 ```
 
-Then create a GitHub Release from the matching tag (for example `v1.6.1`) and copy the matching section from `CHANGELOG.md` into the release notes.
+Then create a GitHub Release from the matching tag (for example `v1.6.2`) and copy the matching section from `CHANGELOG.md` into the release notes.
 
 ## AI Extension Points (v1 Stubs)
 

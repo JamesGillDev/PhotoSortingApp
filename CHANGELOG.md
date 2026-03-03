@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project follows Semantic Versioning.
 
+## [1.6.2] - 2026-03-03
+
+### Fixed
+- Normalized top filter row control heights for a consistent, professional layout:
+  - `Search`
+  - `Person ID`
+  - `Animal ID`
+  - `Location ID`
+  - `Theme`
+  - `Apply Filters`
+  - `Clear Filters`
+
+### Release Readiness
+- `v1.6.2` is validated, published locally, and marked ready for public GitHub release.
+
 ## [1.6.1] - 2026-03-03
 
 ### Added
